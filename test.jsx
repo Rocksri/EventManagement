@@ -24,7 +24,6 @@ ChartJS.register(
 );
 
 const OrganizerDashboard = () => {
-    const [organizerName, setOrganizerName] = useState(""); // New state for organizer's name
     const [events, setEvents] = useState([]);
     const [analytics, setAnalytics] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -32,21 +31,11 @@ const OrganizerDashboard = () => {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const organizerRes = await axios.get("/auth/profile");
-                setOrganizerName(organizerRes.data.name);
-                console.log("Fetched Organizer Name:", organizerRes.data.name); // Step 1
-
+                // Fetch organizer's events
                 const eventsRes = await axios.get("/events?organizer=me");
-                console.log("Raw Events Data from API:", eventsRes.data); // Step 2
+                setEvents(eventsRes.data);
 
-                // Apply the filter
-                const filteredEvents = eventsRes.data.filter(
-                    (event) =>
-                        event.organizer &&
-                        event.organizer.name === organizerRes.data.name // Use the immediate fetched name for accuracy
-                );
-                setEvents(filteredEvents);
-                console.log("Filtered Events for Dashboard:", filteredEvents); // Step 3
+                // Fetch organizer analytics
                 const analyticsRes = await axios.get("/analytics/organizer");
                 setAnalytics(analyticsRes.data);
             } catch (error) {
@@ -96,9 +85,6 @@ const OrganizerDashboard = () => {
 
     return (
         <div className="space-y-8">
-            <h1 className="text-3xl font-bold text-gray-900">
-                Welcome, {organizerName || "Organizer"}!
-            </h1>
             {/* Quick Stats */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="bg-white rounded-lg shadow p-6">

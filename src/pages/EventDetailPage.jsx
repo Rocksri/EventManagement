@@ -28,7 +28,14 @@ const EventDetailPage = () => {
                 }
             } catch (error) {
                 console.error("Error fetching event:", error);
-                toast.error("Failed to load event details");
+
+                // Handle 404 specifically
+                if (error.response?.status === 404) {
+                    toast.error("Event not found or has been removed");
+                    navigate("/events");
+                } else {
+                    toast.error("Failed to load event details");
+                }
             } finally {
                 setLoading(false);
             }

@@ -1,11 +1,14 @@
-// src/pages/CreateEventPage.jsx
-import React, { useState } from "react";
+// src/pages/EditEventPage.jsx
+import React, { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
-import { useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
+import { useAuth } from "../context/AuthContext";
 
-const CreateEventPage = () => {
+const EditEventPage = () => {
+    const { id } = useParams();
     const navigate = useNavigate();
+    const { currentUser } = useAuth();
     const [formData, setFormData] = useState({
         title: "",
         description: "",
@@ -13,7 +16,6 @@ const CreateEventPage = () => {
         time: "",
         category: "",
         location: {
-            // Changed to nested object
             venue: "",
             address: "",
             city: "",
@@ -21,16 +23,48 @@ const CreateEventPage = () => {
         },
         images: [],
         videos: [],
-        ticketTypes: [
-            {
-                name: "General Admission",
-                type: "general",
-                price: 0,
-                quantity: 100,
-            },
-        ],
+        ticketTypes: [],
+        status: "draft", // Added status to initial state and fetch
     });
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchEvent = async () => {
+            try {
+                const { data } = await axios.get(`/events/${id}`);
+
+                // Verify current user is the organizer
+                if (
+                    data.organizer._id !== currentUser.id &&
+                    currentUser.role !== "admin"
+                ) {
+                    toast.error("You are not authorized to edit this event");
+                    navigate("/");
+                    return;
+                }
+
+                setFormData({
+                    title: data.title,
+                    description: data.description,
+                    date: new Date(data.date).toISOString().split("T")[0], // Format date for input[type="date"]
+                    time: data.time,
+                    category: data.category,
+                    location: data.location,
+                    images: data.images,
+                    videos: data.videos,
+                    ticketTypes: data.ticketTypes,
+                    status: data.status || "draft", // Ensure status is set, default to 'draft'
+                });
+            } catch (error) {
+                console.error("Error fetching event:", error);
+                toast.error("Failed to load event data");
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchEvent();
+    }, [id, currentUser, navigate]);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -48,7 +82,13 @@ const CreateEventPage = () => {
     const handleTicketChange = (index, e) => {
         const { name, value } = e.target;
         const ticketTypes = [...formData.ticketTypes];
-        ticketTypes[index] = { ...ticketTypes[index], [name]: value };
+        ticketTypes[index] = {
+            ...ticketTypes[index],
+            // Convert price and quantity to numbers
+            [name]: ["price", "quantity"].includes(name)
+                ? Number(value)
+                : value,
+        };
         setFormData((prev) => ({ ...prev, ticketTypes }));
     };
 
@@ -70,44 +110,50 @@ const CreateEventPage = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
-        const organizerRes = await axios.get("/auth/profile");
+
         try {
-            const eventData = {
+            // Ensure the data sent matches your backend's expected schema for update
+            const eventDataToUpdate = {
                 title: formData.title,
                 description: formData.description,
                 date: formData.date,
                 time: formData.time,
                 category: formData.category,
-                location: {
-                    venue: formData.location.venue,
-                    address: formData.location.address,
-                    city: formData.location.city,
-                    country: formData.location.country,
-                },
+                location: formData.location,
                 images: formData.images,
                 videos: formData.videos,
-                organizer: {
-                    user: organizerRes.data.name,
-                },
-                ticketTypes: formData.ticketTypes,
+                ticketTypes: formData.ticketTypes.map((ticket) => ({
+                    ...ticket,
+                    price: Number(ticket.price), // Ensure numbers are sent as numbers
+                    quantity: Number(ticket.quantity), // Ensure numbers are sent as numbers
+                })),
+                status: formData.status, // Include status in update
             };
 
-            await axios.post("/events", eventData);
-            toast.success("Event created successfully!");
-            navigate("/dashboard");
+            await axios.put(`/events/${id}`, eventDataToUpdate);
+            toast.success("Event updated successfully!");
+            navigate(`/events/${id}`);
         } catch (error) {
-            console.error("Error creating event:", error);
-            toast.error("Failed to create event");
+            console.error("Error updating event:", error);
+            toast.error("Failed to update event");
         } finally {
             setLoading(false);
         }
     };
 
+    if (loading) {
+        return (
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 flex justify-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-600"></div>
+            </div>
+        );
+    }
+
     return (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             <div className="bg-white rounded-xl shadow-md overflow-hidden p-6">
                 <h1 className="text-2xl font-bold text-gray-900 mb-6">
-                    Create New Event
+                    Edit Event: {formData.title}
                 </h1>
 
                 <form onSubmit={handleSubmit} className="space-y-8">
@@ -214,6 +260,26 @@ const CreateEventPage = () => {
                                     required
                                 />
                             </div>
+                            {/* New: Status Field for Edit Page */}
+                            <div>
+                                <label
+                                    htmlFor="status"
+                                    className="block text-sm font-medium text-gray-700"
+                                >
+                                    Event Status
+                                </label>
+                                <select
+                                    name="status"
+                                    id="status"
+                                    value={formData.status}
+                                    onChange={handleChange}
+                                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+                                >
+                                    <option value="draft">Draft</option>
+                                    <option value="published">Published</option>
+                                    <option value="cancelled">Cancelled</option>
+                                </select>
+                            </div>
                         </div>
                     </div>
 
@@ -234,7 +300,7 @@ const CreateEventPage = () => {
                                     type="text"
                                     name="venue"
                                     id="venue"
-                                    value={formData.venue}
+                                    value={formData.location.venue}
                                     onChange={handleLocationChange}
                                     className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
                                     required
@@ -251,7 +317,7 @@ const CreateEventPage = () => {
                                     type="text"
                                     name="address"
                                     id="address"
-                                    value={formData.address}
+                                    value={formData.location.address}
                                     onChange={handleLocationChange}
                                     className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
                                     required
@@ -268,7 +334,7 @@ const CreateEventPage = () => {
                                     type="text"
                                     name="city"
                                     id="city"
-                                    value={formData.city}
+                                    value={formData.location.city}
                                     onChange={handleLocationChange}
                                     className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
                                     required
@@ -285,7 +351,7 @@ const CreateEventPage = () => {
                                     type="text"
                                     name="country"
                                     id="country"
-                                    value={formData.country}
+                                    value={formData.location.country}
                                     onChange={handleLocationChange}
                                     className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
                                     required
@@ -387,7 +453,7 @@ const CreateEventPage = () => {
                             disabled={loading}
                             className="inline-flex items-center px-4 py-2 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none"
                         >
-                            {loading ? "Creating..." : "Create Event"}
+                            {loading ? "Updating..." : "Update Event"}
                         </button>
                     </div>
                 </form>
@@ -396,4 +462,4 @@ const CreateEventPage = () => {
     );
 };
 
-export default CreateEventPage;
+export default EditEventPage;

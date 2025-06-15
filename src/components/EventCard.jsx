@@ -3,7 +3,10 @@ import React from "react";
 import { Link } from "react-router-dom";
 
 const EventCard = ({ event }) => {
-    const minPrice = Math.min(...event.ticketTypes.map((t) => t.price));
+    const minPrice =
+        event.ticketTypes?.length > 0
+            ? Math.min(...event.ticketTypes.map((t) => t.price))
+            : 0;
 
     return (
         <Link to={`/events/${event._id}`} className="group">
@@ -76,6 +79,7 @@ const EventCard = ({ event }) => {
                                 d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
                             ></path>
                         </svg>
+                        {console.log(event)}
                         {event.location.venue}, {event.location.city}
                     </div>
 

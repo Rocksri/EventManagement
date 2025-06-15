@@ -32,10 +32,17 @@ const HomePage = () => {
                     })
                 );
 
+                // ... rest of category/location extraction ...
+                const uniqueCategories = [
+                    ...new Set(data.map((event) => event.category)),
+                ];
+                const uniqueLocations = [
+                    ...new Set(data.map((event) => event.location.city)),
+                ];
+                setCategories(uniqueCategories);
+                setLocations(uniqueLocations);
                 setEvents(eventsWithTickets);
                 setFilteredEvents(eventsWithTickets);
-
-                // ... rest of category/location extraction ...
             } catch (error) {
                 console.error("Error fetching events:", error);
             } finally {
@@ -44,7 +51,7 @@ const HomePage = () => {
         };
 
         fetchEvents();
-    }, []);
+    }, [setFilteredEvents, setEvents, setCategories, setLocations]);
 
     const handleSearch = (filters) => {
         let result = [...events];

@@ -23,6 +23,7 @@ import AdminDashboard from "./pages/AdminDashboard";
 import PaymentPage from "./pages/PaymentPage";
 import SchedulePage from "./pages/SchedulePage";
 import AnalyticsPage from "./pages/AnalyticsPage";
+import EditEventPage from "./pages/EditEventPage";
 
 // Context
 import { AuthProvider, useAuth } from "./context/AuthContext";
@@ -91,6 +92,14 @@ function App() {
                                 element={
                                     <ProtectedRoute>
                                         <AnalyticsPage />
+                                    </ProtectedRoute>
+                                }
+                            />
+                            <Route
+                                path="/events/:id/edit"
+                                element={
+                                    <ProtectedRoute>
+                                        <EditEventPage />
                                     </ProtectedRoute>
                                 }
                             />
