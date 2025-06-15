@@ -357,41 +357,6 @@ const OrganizerDashboard = () => {
                     </div>
                 )}
             </div>
-
-            {/* Quick Actions */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="bg-indigo-50 rounded-lg shadow p-6">
-                    <h3 className="text-lg font-medium text-indigo-900 mb-3">
-                        Need to manage attendees?
-                    </h3>
-                    <p className="text-indigo-700 mb-4">
-                        Export attendee lists, check in guests, and manage
-                        registrations.
-                    </p>
-                    <Link
-                        to="#"
-                        className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700"
-                    >
-                        Manage Attendees
-                    </Link>
-                </div>
-
-                <div className="bg-green-50 rounded-lg shadow p-6">
-                    <h3 className="text-lg font-medium text-green-900 mb-3">
-                        Analyze event performance
-                    </h3>
-                    <p className="text-green-700 mb-4">
-                        Track ticket sales, attendance rates, and revenue
-                        metrics.
-                    </p>
-                    <Link
-                        to="#"
-                        className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700"
-                    >
-                        View Analytics
-                    </Link>
-                </div>
-            </div>
         </div>
     );
 };
