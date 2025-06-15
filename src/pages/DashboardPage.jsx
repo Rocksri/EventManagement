@@ -1,5 +1,6 @@
 // src/pages/DashboardPage.jsx
 import React, { useState } from "react";
+import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import UserDashboard from "../components/UserDashboard";
 import OrganizerDashboard from "../components/OrganizerDashboard";
@@ -44,16 +45,16 @@ const DashboardPage = () => {
                         >
                             My Events
                         </button>
-                        <button
-                            onClick={() => setActiveTab("tickets")}
+                        <Link
+                            to="/events"
                             className={`py-4 px-6 text-center border-b-2 font-medium text-sm ${
-                                activeTab === "tickets"
+                                activeTab === "events"
                                     ? "border-indigo-500 text-indigo-600"
                                     : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                             }`}
                         >
-                            My Tickets
-                        </button>
+                            Browse more events
+                        </Link>
                         {currentUser.role === "organizer" && (
                             <button
                                 onClick={() => setActiveTab("organizer")}

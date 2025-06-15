@@ -79,7 +79,6 @@ const EventCard = ({ event }) => {
                                 d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
                             ></path>
                         </svg>
-                        {console.log(event)}
                         {event.location.venue}, {event.location.city}
                     </div>
 

@@ -60,6 +60,8 @@ const CreateEventPage = () => {
                 { name: "", type: "general", price: 0, quantity: 100 },
             ],
         }));
+
+        console.log(...prev.ticketTypes, "price");
     };
 
     const removeTicketType = (index) => {
@@ -72,6 +74,7 @@ const CreateEventPage = () => {
         setLoading(true);
         const organizerRes = await axios.get("/auth/profile");
         try {
+            // Prepare event data without ticketTypes
             const eventData = {
                 title: formData.title,
                 description: formData.description,
@@ -89,15 +92,28 @@ const CreateEventPage = () => {
                 organizer: {
                     user: organizerRes.data.name,
                 },
-                ticketTypes: formData.ticketTypes,
             };
 
-            await axios.post("/events", eventData);
-            toast.success("Event created successfully!");
+            // Create event first
+            const response = await axios.post("/events", eventData);
+            const eventId = response.data._id;
+
+            // Create tickets separately
+            for (const ticket of formData.ticketTypes) {
+                await axios.post("/tickets", {
+                    event: eventId,
+                    name: ticket.name,
+                    type: ticket.type,
+                    price: ticket.price,
+                    quantity: ticket.quantity,
+                });
+            }
+
+            toast.success("Event created successfully with tickets!");
             navigate("/dashboard");
         } catch (error) {
-            console.error("Error creating event:", error);
-            toast.error("Failed to create event");
+            console.error("Error creating event or tickets:", error);
+            toast.error("Failed to create event or tickets");
         } finally {
             setLoading(false);
         }

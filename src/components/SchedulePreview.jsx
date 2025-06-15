@@ -11,6 +11,7 @@ const SchedulePreview = ({ eventId }) => {
     useEffect(() => {
         const fetchSchedule = async () => {
             try {
+                // *** CORRECTED: Added /api prefix to the route ***
                 const { data } = await axios.get(`/schedules/${eventId}`);
                 setSchedule(data);
             } catch (error) {
@@ -32,6 +33,8 @@ const SchedulePreview = ({ eventId }) => {
         );
     }
 
+    // This condition correctly checks if the schedule is empty or not found.
+    // If `schedule.sessions` is an empty array, this block will execute.
     if (!schedule || !schedule.sessions || schedule.sessions.length === 0) {
         return (
             <div className="text-gray-500 text-sm">

@@ -2,8 +2,10 @@
 import React, { useState } from "react";
 import { useStripe, useElements, CardElement } from "@stripe/react-stripe-js";
 import { toast } from "react-hot-toast";
+import axios from "axios";
 
-const PaymentForm = ({ onSuccess, amount }) => {
+const PaymentForm = ({ onSuccess, amount, clientSecret }) => {
+    // Add clientSecret prop
     const stripe = useStripe();
     const elements = useElements();
     const [loading, setLoading] = useState(false);
@@ -25,56 +27,50 @@ const PaymentForm = ({ onSuccess, amount }) => {
         setLoading(true);
 
         if (!stripe || !elements) {
-            // Stripe.js has not yet loaded
             toast.error("Payment system is not ready. Please try again.");
             setLoading(false);
             return;
         }
 
-        // Validate billing details
         if (!billingDetails.name || !billingDetails.email) {
             toast.error("Please fill in all required billing details");
             setLoading(false);
             return;
         }
 
-        // Create payment method using Stripe
-        const { paymentMethod, error } = await stripe.createPaymentMethod({
-            type: "card",
-            card: elements.getElement(CardElement),
-            billing_details: {
-                name: billingDetails.name,
-                email: billingDetails.email,
-                address: {
-                    line1: billingDetails.address,
-                    city: billingDetails.city,
-                    postal_code: billingDetails.postalCode,
-                },
-            },
-        });
+        try {
+            // Confirm the payment with the client secret
+            const { error, paymentIntent } = await stripe.confirmCardPayment(
+                clientSecret, // Use the clientSecret from props
+                {
+                    payment_method: {
+                        card: elements.getElement(CardElement),
+                        billing_details: {
+                            name: billingDetails.name,
+                            email: billingDetails.email,
+                            address: {
+                                line1: billingDetails.address,
+                                city: billingDetails.city,
+                                postal_code: billingDetails.postalCode,
+                            },
+                        },
+                    },
+                }
+            );
 
-        if (error) {
+            if (error) {
+                console.error("Payment error:", error);
+                toast.error(error.message || "Payment failed");
+            } else if (paymentIntent.status === "succeeded") {
+                toast.success("Payment successful!");
+                onSuccess();
+            }
+        } catch (error) {
             console.error("Payment error:", error);
             toast.error(error.message || "Payment failed");
+        } finally {
             setLoading(false);
-            return;
         }
-
-        // Confirm the payment
-        const { error: confirmError } = await stripe.confirmCardPayment(
-            paymentMethod.id
-        );
-
-        if (confirmError) {
-            console.error("Confirmation error:", confirmError);
-            toast.error(confirmError.message || "Payment confirmation failed");
-            setLoading(false);
-            return;
-        }
-
-        // Payment succeeded
-        toast.success("Payment successful!");
-        onSuccess();
     };
 
     return (
@@ -209,7 +205,7 @@ const PaymentForm = ({ onSuccess, amount }) => {
                             Total:
                         </span>
                         <span className="text-xl font-bold">
-                            ${amount.toFixed(2)}
+                            ${(amount * 1.09).toFixed(2)}
                         </span>
                     </div>
                 </div>
@@ -223,7 +219,7 @@ const PaymentForm = ({ onSuccess, amount }) => {
                 >
                     {loading
                         ? "Processing Payment..."
-                        : `Pay $${amount.toFixed(2)}`}
+                        : `Pay ${(amount * 1.09).toFixed(2)}`}
                 </button>
             </div>
         </form>

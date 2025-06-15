@@ -15,6 +15,9 @@ const EventDetailPage = () => {
     const [loading, setLoading] = useState(true);
     const [selectedTickets, setSelectedTickets] = useState([]);
     const [isOrganizer, setIsOrganizer] = useState(false);
+    const [tickets, setTickets] = useState([]); // Add tickets state
+    const [ticketsLoading, setTicketsLoading] = useState(true); // Add loading state for tickets
+
 
     useEffect(() => {
         const fetchEvent = async () => {
@@ -44,20 +47,72 @@ const EventDetailPage = () => {
         fetchEvent();
     }, [id, currentUser]);
 
+    useEffect(() => {
+        const fetchEventAndTickets = async () => {
+            try {
+                setLoading(true);
+                // Fetch event
+                const { data: eventData } = await axios.get(`/events/${id}`);
+                setEvent(eventData);
+
+                // Check if current user is organizer
+                if (currentUser && eventData.organizer._id === currentUser.id) {
+                    setIsOrganizer(true);
+                }
+
+                // Fetch tickets for this event
+                setTicketsLoading(true);
+                const { data: ticketsData } = await axios.get(
+                    `/tickets/event/${id}`
+                );
+                // Ensure tickets have required fields
+                const validatedTickets = ticketsData.map((ticket) => ({
+                    ...ticket,
+                    price: Number(ticket.price) || 0, // Ensure price is a number
+                }));
+                setTickets(validatedTickets);
+            } catch (error) {
+                console.error("Error fetching data:", error);
+                if (error.response?.status === 404) {
+                    toast.error("Event not found or has been removed");
+                    navigate("/events");
+                } else {
+                    toast.error("Failed to load event details");
+                }
+            } finally {
+                setLoading(false);
+                setTicketsLoading(false);
+            }
+        };
+
+        fetchEventAndTickets();
+    }, [id, currentUser]);
+
+    useEffect(() => {
+        if (tickets.length > 0) {
+            setSelectedTickets([]);
+        }
+    }, [tickets]);
+
     const handleTicketSelection = (ticketId, quantity) => {
         setSelectedTickets((prev) => {
-            const existing = prev.find((t) => t.ticketId === ticketId);
-            if (existing) {
-                if (quantity === 0) {
-                    return prev.filter((t) => t.ticketId !== ticketId);
-                }
-                return prev.map((t) =>
-                    t.ticketId === ticketId ? { ...t, quantity } : t
-                );
-            } else if (quantity > 0) {
-                return [...prev, { ticketId, quantity }];
+            // Remove ticket if quantity is 0
+            if (quantity === 0) {
+                return prev.filter((t) => t.ticketId !== ticketId);
             }
-            return prev;
+
+            // Update existing ticket
+            const existingIndex = prev.findIndex(
+                (t) => t.ticketId === ticketId
+            );
+            if (existingIndex >= 0) {
+                const updated = [...prev];
+                updated[existingIndex] = { ticketId, quantity };
+                return updated;
+            }
+
+            // Add new ticket
+            return [...prev, { ticketId, quantity }];
         });
     };
 
@@ -111,10 +166,29 @@ const EventDetailPage = () => {
         );
     }
 
+
+
     const totalPrice = selectedTickets.reduce((sum, item) => {
-        const ticket = event.ticketTypes.find((t) => t._id === item.ticketId);
-        return sum + (ticket ? ticket.price * item.quantity : 0);
+        const ticket = tickets.find((t) => t._id === item.ticketId);
+        if (ticket) {
+            console.log(
+                `Adding: ${ticket.price} * ${item.quantity} = ${
+                    ticket.price * item.quantity
+                }`
+            );
+            return sum + ticket.price * item.quantity;
+        }
+        return sum;
     }, 0);
+
+
+    if (loading || ticketsLoading) {
+        return (
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 flex justify-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-600"></div>
+            </div>
+        );
+    }
 
     return (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -246,8 +320,9 @@ const EventDetailPage = () => {
                         </h2>
 
                         <TicketSelector
-                            ticketTypes={event.ticketTypes}
+                            ticketTypes={tickets}
                             onSelectionChange={handleTicketSelection}
+                            loading={ticketsLoading} // Pass loading state
                         />
 
                         <div className="mt-6">

@@ -1,31 +1,32 @@
-// src/components/TicketSelector.jsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
 const TicketSelector = ({ ticketTypes, onSelectionChange }) => {
-    const [selections, setSelections] = useState(
-        ticketTypes.reduce((acc, ticket) => {
-            acc[ticket._id] = 0;
-            return acc;
-        }, {})
-    );
+    const [selections, setSelections] = useState({});
 
-    const handleQuantityChange = (ticketId, quantity) => {
-        const newQuantity = Math.max(
+    // Initialize selections when ticketTypes are available
+    useEffect(() => {
+        if (ticketTypes.length > 0) {
+        const initialSelections = {};
+        ticketTypes.forEach((ticket) => {
+                initialSelections[ticket._id] = selections[ticket._id] || 0;
+        });
+        setSelections(initialSelections);
+        }
+    }, [ticketTypes]);
+
+    const handleQuantityChange = (ticketId, newQuantity) => {
+        const ticket = ticketTypes.find((t) => t._id === ticketId);
+        if (!ticket) return;
+
+        const quantity = Math.max(
             0,
-            Math.min(
-                quantity,
-                ticketTypes.find((t) => t._id === ticketId).quantity
-            )
+            Math.min(newQuantity, ticket.quantity - ticket.sold)
         );
-        const newSelections = { ...selections, [ticketId]: newQuantity };
-        setSelections(newSelections);
+        const updatedSelections = { ...selections, [ticketId]: quantity };
+        setSelections(updatedSelections);
 
-        // Convert to array of {ticketId, quantity} for parent
-        const selectedTickets = Object.entries(newSelections)
-            .filter(([_, qty]) => qty > 0)
-            .map(([id, qty]) => ({ ticketId: id, quantity: qty }));
-
-        onSelectionChange(selectedTickets);
+        // Notify parent of the specific change
+        onSelectionChange(ticketId, quantity);
     };
 
     return (
@@ -57,12 +58,12 @@ const TicketSelector = ({ ticketTypes, onSelectionChange }) => {
                             onClick={() =>
                                 handleQuantityChange(
                                     ticket._id,
-                                    selections[ticket._id] - 1
+                                    (selections[ticket._id] || 0) - 1
                                 )
                             }
-                            disabled={selections[ticket._id] <= 0}
-                            className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                                selections[ticket._id] > 0
+                            disabled={(selections[ticket._id] || 0) <= 0}
+                            className={`w-7 h-7 rounded-full flex items-center justify-center ${
+                                (selections[ticket._id] || 0) > 0
                                     ? "bg-indigo-100 text-indigo-600 hover:bg-indigo-200"
                                     : "bg-gray-100 text-gray-400 cursor-not-allowed"
                             }`}
@@ -83,24 +84,34 @@ const TicketSelector = ({ ticketTypes, onSelectionChange }) => {
                             </svg>
                         </button>
 
-                        <span className="mx-3 text-gray-900 w-6 text-center">
-                            {selections[ticket._id]}
-                        </span>
+                        <input
+                            type="number"
+                            value={selections[ticket._id] || 0}
+                            onChange={(e) =>
+                                handleQuantityChange(
+                                    ticket._id,
+                                    e.target.value // The handleQuantityChange function will parse and validate
+                                )
+                            }
+                            min="0" // Minimum value
+                            max={ticket.quantity - ticket.sold} // Maximum value based on available tickets
+                            className="mx-1 text-gray-900 w-12 text-center border rounded-md px-1 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" // Adjusted width and added basic styling
+                        />
 
                         <button
                             type="button"
                             onClick={() =>
                                 handleQuantityChange(
                                     ticket._id,
-                                    selections[ticket._id] + 1
+                                    (selections[ticket._id] || 0) + 1
                                 )
                             }
                             disabled={
-                                selections[ticket._id] >=
+                                (selections[ticket._id] || 0) >=
                                 ticket.quantity - ticket.sold
                             }
-                            className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                                selections[ticket._id] <
+                            className={`w-7 h-7 rounded-full flex items-center justify-center ${
+                                (selections[ticket._id] || 0) <
                                 ticket.quantity - ticket.sold
                                     ? "bg-indigo-100 text-indigo-600 hover:bg-indigo-200"
                                     : "bg-gray-100 text-gray-400 cursor-not-allowed"

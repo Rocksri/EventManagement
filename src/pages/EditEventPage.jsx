@@ -1,9 +1,9 @@
-// src/pages/EditEventPage.jsx
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { toast } from "react-hot-toast";
 import { useAuth } from "../context/AuthContext";
+import ScheduleEditor from "../components/ScheduleEditor"; // Import ScheduleEditor
 
 const EditEventPage = () => {
     const { id } = useParams();
@@ -24,18 +24,21 @@ const EditEventPage = () => {
         images: [],
         videos: [],
         ticketTypes: [],
-        status: "draft", // Added status to initial state and fetch
+        schedule: { sessions: [] }, // Initialize schedule with an empty sessions array
+        status: "draft",
     });
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const fetchEvent = async () => {
+        const fetchEventAndSchedule = async () => {
+            // Renamed to fetch both
             try {
-                const { data } = await axios.get(`/events/${id}`);
+                const eventRes = await axios.get(`/events/${id}`);
+                const eventData = eventRes.data;
 
                 // Verify current user is the organizer
                 if (
-                    data.organizer._id !== currentUser.id &&
+                    eventData.organizer._id !== currentUser.id &&
                     currentUser.role !== "admin"
                 ) {
                     toast.error("You are not authorized to edit this event");
@@ -43,17 +46,55 @@ const EditEventPage = () => {
                     return;
                 }
 
+                // Fetch schedule
+                let scheduleSessions = [];
+                try {
+                    const scheduleRes = await axios.get(`/schedules/${id}`);
+                    if (scheduleRes.data && scheduleRes.data.sessions) {
+                        scheduleSessions = scheduleRes.data.sessions;
+                        // For display in ScheduleEditor, ensure startTime/endTime are "HH:MM"
+                        // Mongoose stores as Date objects, so we need to convert back
+                        scheduleSessions = scheduleSessions.map((session) => ({
+                            ...session,
+                            startTime: new Date(session.startTime)
+                                .toTimeString()
+                                .slice(0, 5),
+                            endTime: new Date(session.endTime)
+                                .toTimeString()
+                                .slice(0, 5),
+                        }));
+                    }
+                } catch (scheduleError) {
+                    // It's okay if schedule doesn't exist yet, initialize with empty
+                    if (
+                        scheduleError.response &&
+                        scheduleError.response.status === 404
+                    ) {
+                        console.log(
+                            "No schedule found for this event, initializing empty."
+                        );
+                        scheduleSessions = [];
+                    } else {
+                        console.error(
+                            "Error fetching schedule:",
+                            scheduleError
+                        );
+                        toast.error("Failed to load schedule data");
+                    }
+                }
+
                 setFormData({
-                    title: data.title,
-                    description: data.description,
-                    date: new Date(data.date).toISOString().split("T")[0], // Format date for input[type="date"]
-                    time: data.time,
-                    category: data.category,
-                    location: data.location,
-                    images: data.images,
-                    videos: data.videos,
-                    ticketTypes: data.ticketTypes,
-                    status: data.status || "draft", // Ensure status is set, default to 'draft'
+                    title: eventData.title,
+                    description: eventData.description,
+                    date: new Date(eventData.date).toISOString().split("T")[0],
+                    time: eventData.time,
+                    category: eventData.category,
+                    location: eventData.location,
+                    images: eventData.images,
+                    videos: eventData.videos,
+                    ticketTypes: eventData.ticketTypes,
+                    schedule: { sessions: scheduleSessions }, // Set fetched sessions
+                    status: eventData.status || "draft",
                 });
             } catch (error) {
                 console.error("Error fetching event:", error);
@@ -63,7 +104,7 @@ const EditEventPage = () => {
             }
         };
 
-        fetchEvent();
+        fetchEventAndSchedule();
     }, [id, currentUser, navigate]);
 
     const handleChange = (e) => {
@@ -107,6 +148,40 @@ const EditEventPage = () => {
         setFormData((prev) => ({ ...prev, ticketTypes }));
     };
 
+    // New function to handle saving the schedule received from ScheduleEditor
+    const handleSaveSchedule = async (updatedSessions) => {
+        setLoading(true); // Indicate loading while saving schedule
+        try {
+            // The scheduleController expects 'event' and 'sessions'
+            await axios.post("/api/schedules", {
+                event: id, // Pass the event ID
+                sessions: updatedSessions.map((session) => ({
+                    ...session,
+                    // Convert "HH:MM" strings to Date objects for the backend
+                    // Assuming the event's date is relevant, otherwise use a dummy date like "2000-01-01"
+                    startTime: new Date(
+                        `${formData.date}T${session.startTime}:00`
+                    ),
+                    endTime: new Date(`${formData.date}T${session.endTime}:00`),
+                })),
+            });
+            toast.success("Schedule updated successfully!");
+            // Update formData to reflect the saved schedule
+            setFormData((prev) => ({
+                ...prev,
+                schedule: { sessions: updatedSessions },
+            }));
+        } catch (error) {
+            console.error(
+                "Error updating schedule:",
+                error.response ? error.response.data : error.message
+            );
+            toast.error("Failed to update schedule");
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
@@ -132,7 +207,7 @@ const EditEventPage = () => {
 
             await axios.put(`/events/${id}`, eventDataToUpdate);
             toast.success("Event updated successfully!");
-            navigate(`/events/${id}`);
+            // No need to navigate away, just confirm update
         } catch (error) {
             console.error("Error updating event:", error);
             toast.error("Failed to update event");
@@ -359,6 +434,16 @@ const EditEventPage = () => {
                             </div>
                         </div>
                     </div>
+
+                    {/* Schedule Editor Component */}
+                    <ScheduleEditor
+                        sessions={formData.schedule.sessions}
+                        onSave={handleSaveSchedule}
+                        onCancel={() => {
+                            /* Implement cancel logic if needed */
+                        }}
+                        eventId={id} // Pass the event ID to ScheduleEditor
+                    />
 
                     {/* Ticket Information */}
                     <div>

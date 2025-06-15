@@ -46,10 +46,24 @@ const UserDashboard = () => {
         fetchData();
     }, []);
 
-    const cancelTicket = async (ticketId) => {
+    const cancelTicket = async (orderId, ticketIndex) => {
         try {
-            await axios.delete(`/tickets/${ticketId}`);
-            setTickets(tickets.filter((ticket) => ticket._id !== ticketId));
+            await axios.put(`/tickets/orders/${orderId}/cancel-ticket`, {
+                ticketIndex,
+            });
+            // Update state to remove the ticket
+            setTickets(
+                tickets.map((order) =>
+                    order._id === orderId
+                        ? {
+                              ...order,
+                              tickets: order.tickets.filter(
+                                  (_, i) => i !== ticketIndex
+                              ),
+                          }
+                        : order
+                )
+            );
             toast.success("Ticket cancelled successfully");
         } catch (error) {
             console.error("Error cancelling ticket:", error);
@@ -64,7 +78,6 @@ const UserDashboard = () => {
             </div>
         );
     }
-
     return (
         <div className="space-y-8">
             {/* Upcoming Events */}
@@ -73,12 +86,6 @@ const UserDashboard = () => {
                     <h2 className="text-xl font-bold text-gray-900">
                         Upcoming Events
                     </h2>
-                    <Link
-                        to="/events"
-                        className="text-sm text-indigo-600 hover:text-indigo-800"
-                    >
-                        Browse more events
-                    </Link>
                 </div>
 
                 {upcomingEvents.length === 0 ? (
@@ -100,16 +107,6 @@ const UserDashboard = () => {
                                 key={order._id}
                                 className="bg-white rounded-lg shadow overflow-hidden"
                             >
-                                {order.event.images.length > 0 ? (
-                                    <img
-                                        src={order.event.images[0]}
-                                        alt={order.event.title}
-                                        className="w-full h-40 object-cover"
-                                    />
-                                ) : (
-                                    <div className="bg-gray-200 border-2 border-dashed w-full h-40" />
-                                )}
-
                                 <div className="p-4">
                                     <h3 className="font-medium text-gray-900">
                                         {order.event.title}
@@ -200,13 +197,14 @@ const UserDashboard = () => {
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap">
                                                     <div className="text-sm text-gray-900">
-                                                        {ticket.ticketId.name}
+                                                        {ticket.ticketId
+                                                            ?.name || "N/A"}
                                                     </div>
                                                     <div className="text-sm text-gray-500">
                                                         $
-                                                        {ticket.price.toFixed(
+                                                        {ticket.ticketId?.price?.toFixed(
                                                             2
-                                                        )}
+                                                        ) || "0.00"}
                                                     </div>
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -219,11 +217,8 @@ const UserDashboard = () => {
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                                     <button
-                                                        onClick={() =>
-                                                            cancelTicket(
-                                                                order._id
-                                                            )
-                                                        }
+                                                        onClick={() => cancelTicket(order._id, index)}
+
                                                         className="text-red-600 hover:text-red-900"
                                                     >
                                                         Cancel

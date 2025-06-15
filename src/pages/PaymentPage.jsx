@@ -16,6 +16,7 @@ const PaymentPage = () => {
     const navigate = useNavigate();
     const [clientSecret, setClientSecret] = useState("");
     const [event, setEvent] = useState(null);
+    const [tickets, setTickets] = useState([]); // Added tickets state
     const [loading, setLoading] = useState(true);
     const [paymentIntent, setPaymentIntent] = useState(null);
 
@@ -37,12 +38,21 @@ const PaymentPage = () => {
             return;
         }
 
-        const fetchEvent = async () => {
+        const fetchEventAndTickets = async () => {
             try {
-                const { data } = await axios.get(`/events/${state.eventId}`);
-                setEvent(data);
+                // Fetch event
+                const { data: eventData } = await axios.get(
+                    `/events/${state.eventId}`
+                );
+                setEvent(eventData);
+
+                // Fetch tickets for this event
+                const { data: ticketsData } = await axios.get(
+                    `/tickets/event/${state.eventId}`
+                );
+                setTickets(ticketsData);
             } catch (error) {
-                console.error("Error fetching event:", error);
+                console.error("Error fetching data:", error);
                 toast.error("Failed to load event details");
             }
         };
@@ -55,7 +65,7 @@ const PaymentPage = () => {
                 });
                 setClientSecret(data.clientSecret);
                 setPaymentIntent({
-                    id: data.paymentIntentId,
+                    id: data.paymentIntentId, // Now using correct property
                     amount: data.totalAmount,
                 });
             } catch (error) {
@@ -67,7 +77,7 @@ const PaymentPage = () => {
             }
         };
 
-        fetchEvent();
+        fetchEventAndTickets();
         createPaymentIntent();
     }, [state, currentUser, navigate]);
 
@@ -141,7 +151,7 @@ const PaymentPage = () => {
                             </h3>
                             <ul className="divide-y divide-gray-200">
                                 {state.tickets.map((ticket, index) => {
-                                    const ticketType = event?.ticketTypes.find(
+                                    const ticketType = tickets.find(
                                         (t) => t._id === ticket.ticketId
                                     );
                                     if (!ticketType) return null;
@@ -181,14 +191,18 @@ const PaymentPage = () => {
                             </div>
                             <div className="flex justify-between mt-2">
                                 <p className="text-gray-600">Fees</p>
-                                <p className="text-gray-900">$0.00</p>
+                                <p className="text-gray-900">
+                                    $
+                                    {(paymentIntent?.amount * 0.09)?.toFixed(2)}
+                                </p>
                             </div>
                             <div className="flex justify-between mt-4 pt-4 border-t border-gray-200">
                                 <p className="text-lg font-medium text-gray-900">
                                     Total
                                 </p>
                                 <p className="text-lg font-bold text-gray-900">
-                                    ${paymentIntent?.amount?.toFixed(2)}
+                                    $
+                                    {(paymentIntent?.amount * 1.09)?.toFixed(2)}
                                 </p>
                             </div>
                         </div>
@@ -205,9 +219,11 @@ const PaymentPage = () => {
                                 stripe={stripePromise}
                                 options={{ clientSecret }}
                             >
+                                {/* Only pass needed props to PaymentForm */}
                                 <PaymentForm
-                                    onSuccess={handlePaymentSuccess}
                                     amount={paymentIntent.amount}
+                                    onSuccess={handlePaymentSuccess}
+                                    clientSecret={clientSecret} // Pass clientSecret to PaymentForm
                                 />
                             </Elements>
                         )}
