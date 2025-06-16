@@ -1,256 +1,236 @@
-import React, { useState, useEffect } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
-import axios from "axios";
-import { useAuth } from "../context/AuthContext";
+import React, { useState } from "react";
+import { useStripe, useElements, CardElement } from "@stripe/react-stripe-js";
 import { toast } from "react-hot-toast";
-import { Elements } from "@stripe/react-stripe-js";
-import { loadStripe } from "@stripe/stripe-js";
-import PaymentForm from "../components/PaymentForm";
 
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY);
+const PaymentForm = ({ onSuccess, amount, clientSecret, billingDetails }) => {
+    // Add billingDetails to props
+    const stripe = useStripe();
+    const elements = useElements();
+    const [loading, setLoading] = useState(false);
+    // Remove billingDetails state from here, as it will be passed down
 
-const PaymentPage = () => {
-    const { state } = useLocation();
-    const { currentUser } = useAuth();
-    const navigate = useNavigate();
-    const [clientSecret, setClientSecret] = useState("");
-    const [event, setEvent] = useState(null);
-    const [tickets, setTickets] = useState([]); // Added tickets state
-    const [loading, setLoading] = useState(true);
-    const [paymentIntent, setPaymentIntent] = useState(null);
+    // No need for handleBillingChange if billingDetails is managed in parent.
+    // If you want PaymentForm to manage billingDetails internally and then pass it up,
+    // you'll keep the state and handler here, but pass it to onSuccess.
+    // For now, let's assume PaymentPage manages it and passes it down, as that's often cleaner.
 
-    useEffect(() => {
-        if (
-            !state ||
-            !state.eventId ||
-            !state.tickets ||
-            state.tickets.length === 0
-        ) {
-            toast.error("Invalid payment request");
-            navigate("/");
+    // If PaymentForm manages billingDetails internally, keep these:
+    const [localBillingDetails, setLocalBillingDetails] = useState({
+        name: "",
+        email: "",
+        address: "",
+        city: "",
+        postalCode: "",
+    });
+
+    const handleLocalBillingChange = (e) => {
+        const { name, value } = e.target;
+        setLocalBillingDetails((prev) => ({ ...prev, [name]: value }));
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setLoading(true);
+
+        if (!stripe || !elements) {
+            toast.error("Payment system is not ready. Please try again.");
+            setLoading(false);
             return;
         }
 
-        if (!currentUser) {
-            toast.error("Please login to complete payment");
-            navigate("/login");
+        // Use localBillingDetails here for validation if managed internally
+        if (!localBillingDetails.name || !localBillingDetails.email) {
+            toast.error("Please fill in all required billing details");
+            setLoading(false);
             return;
         }
 
-        const fetchEventAndTickets = async () => {
-            try {
-                // Fetch event
-                const { data: eventData } = await axios.get(
-                    `/events/${state.eventId}`
-                );
-                setEvent(eventData);
-
-                // Fetch tickets for this event
-                const { data: ticketsData } = await axios.get(
-                    `/tickets/event/${state.eventId}`
-                );
-                setTickets(ticketsData);
-            } catch (error) {
-                console.error("Error fetching data:", error);
-                toast.error("Failed to load event details");
-            }
-        };
-
-        const createPaymentIntent = async () => {
-            try {
-                const { data } = await axios.post("/tickets/purchase", {
-                    eventId: state.eventId,
-                    tickets: state.tickets,
-                });
-                setClientSecret(data.clientSecret);
-                setPaymentIntent({
-                    id: data.paymentIntentId,
-                    amount: data.totalAmount,
-                });
-            } catch (error) {
-                console.error("Error creating payment intent:", error);
-                toast.error("Failed to initialize payment");
-                navigate(`/events/${state.eventId}`);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchEventAndTickets();
-        createPaymentIntent();
-    }, [state, currentUser, navigate]);
-
-    const handlePaymentSuccess = async () => {
         try {
-            await axios.post("/tickets/confirm", {
-                paymentIntentId: paymentIntent.id,
-                eventId: state.eventId,
-                tickets: state.tickets,
-            });
+            const { error, paymentIntent } = await stripe.confirmCardPayment(
+                clientSecret,
+                {
+                    payment_method: {
+                        card: elements.getElement(CardElement),
+                        billing_details: {
+                            name: localBillingDetails.name, // Use localBillingDetails
+                            email: localBillingDetails.email, // Use localBillingDetails
+                            address: {
+                                line1: localBillingDetails.address, // Use localBillingDetails
+                                city: localBillingDetails.city, // Use localBillingDetails
+                                postal_code: localBillingDetails.postalCode, // Use localBillingDetails
+                            },
+                        },
+                    },
+                }
+            );
 
-            toast.success("Payment successful! Tickets purchased.");
-            navigate("/dashboard");
+            if (error) {
+                console.error("Payment error:", error);
+                toast.error(error.message || "Payment failed");
+            } else if (paymentIntent.status === "succeeded") {
+                toast.success("Payment successful!");
+                // Pass billingDetails back to the parent
+                onSuccess(localBillingDetails); // Pass the collected billing details
+            }
         } catch (error) {
-            console.error("Error confirming payment:", error);
-            toast.error("Failed to confirm payment");
+            console.error("Payment error:", error);
+            toast.error(error.message || "Payment failed");
+        } finally {
+            setLoading(false);
         }
     };
 
-    if (loading) {
-        return (
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 flex justify-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-600"></div>
-            </div>
-        );
-    }
-
     return (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            <div className="bg-white rounded-xl shadow-md overflow-hidden">
-                <div className="grid grid-cols-1 lg:grid-cols-2">
-                    {/* Order Summary */}
-                    <div className="bg-gray-50 p-8">
-                        <h2 className="text-2xl font-bold text-gray-900 mb-6">
-                            Order Summary
-                        </h2>
+        <form onSubmit={handleSubmit} className="space-y-6">
+            <div>
+                <h3 className="text-lg font-medium text-gray-900 mb-4">
+                    Billing Information
+                </h3>
 
-                        {event && (
-                            <div className="mb-8">
-                                <div className="flex items-start">
-                                    {event.images.length > 0 ? (
-                                        <img
-                                            src={event.images[0]}
-                                            alt={event.title}
-                                            className="w-24 h-24 object-cover rounded-lg"
-                                        />
-                                    ) : (
-                                        <div className="bg-gray-200 border-2 border-dashed rounded-xl w-24 h-24" />
-                                    )}
-                                    <div className="ml-4">
-                                        <h3 className="text-lg font-medium text-gray-900">
-                                            {event.title}
-                                        </h3>
-                                        <p className="text-gray-500 text-sm">
-                                            {new Date(
-                                                event.date
-                                            ).toLocaleDateString("en-US", {
-                                                weekday: "short",
-                                                month: "short",
-                                                day: "numeric",
-                                            })}
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        <div className="border-t border-gray-200 pt-4">
-                            <h3 className="text-lg font-medium text-gray-900 mb-4">
-                                Tickets
-                            </h3>
-                            <ul className="divide-y divide-gray-200">
-                                {state.tickets.map((ticket, index) => {
-                                    const ticketType = tickets.find(
-                                        (t) => t._id === ticket.ticketId
-                                    );
-                                    if (!ticketType) return null;
-
-                                    return (
-                                        <li
-                                            key={index}
-                                            className="py-3 flex justify-between"
-                                        >
-                                            <div>
-                                                <p className="text-gray-900">
-                                                    {ticketType.name}
-                                                </p>
-                                                <p className="text-gray-500 text-sm">
-                                                    Quantity: {ticket.quantity}
-                                                </p>
-                                            </div>
-                                            <p className="text-gray-900">
-                                                $
-                                                {(
-                                                    ticketType.price *
-                                                    ticket.quantity
-                                                ).toFixed(2)}
-                                            </p>
-                                        </li>
-                                    );
-                                })}
-                            </ul>
-                        </div>
-
-                        <div className="mt-6 border-t border-gray-200 pt-4">
-                            <div className="flex justify-between">
-                                <p className="text-gray-600">Subtotal</p>
-                                <p className="text-gray-900">
-                                    ${paymentIntent?.amount?.toFixed(2)}
-                                </p>
-                            </div>
-                            <div className="flex justify-between mt-2">
-                                <p className="text-gray-600">Fees</p>
-                                <p className="text-gray-900">
-                                    $
-                                    {(paymentIntent?.amount * 0.09)?.toFixed(2)}
-                                </p>
-                            </div>
-                            <div className="flex justify-between mt-4 pt-4 border-t border-gray-200">
-                                <p className="text-lg font-medium text-gray-900">
-                                    Total
-                                </p>
-                                <p className="text-lg font-bold text-gray-900">
-                                    $
-                                    {(paymentIntent?.amount * 1.09)?.toFixed(2)}
-                                </p>
-                            </div>
-                        </div>
+                <div className="grid grid-cols-1 gap-y-4 sm:grid-cols-2 sm:gap-x-4">
+                    <div className="sm:col-span-2">
+                        <label
+                            htmlFor="name"
+                            className="block text-sm font-medium text-gray-700"
+                        >
+                            Full Name *
+                        </label>
+                        <input
+                            type="text"
+                            id="name"
+                            name="name"
+                            value={localBillingDetails.name} // Use localBillingDetails
+                            onChange={handleLocalBillingChange} // Use localBillingChange
+                            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+                            required
+                        />
                     </div>
 
-                    {/* Payment Form */}
-                    <div className="p-8">
-                        <h2 className="text-2xl font-bold text-gray-900 mb-6">
-                            Payment Information
-                        </h2>
+                    <div className="sm:col-span-2">
+                        <label
+                            htmlFor="email"
+                            className="block text-sm font-medium text-gray-700"
+                        >
+                            Email *
+                        </label>
+                        <input
+                            type="email"
+                            id="email"
+                            name="email"
+                            value={localBillingDetails.email} // Use localBillingDetails
+                            onChange={handleLocalBillingChange} // Use localBillingChange
+                            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+                            required
+                        />
+                    </div>
 
-                        {clientSecret && (
-                            <Elements
-                                stripe={stripePromise}
-                                options={{ clientSecret }}
-                            >
-                                {/* Only pass needed props to PaymentForm */}
-                                <PaymentForm
-                                    amount={paymentIntent.amount}
-                                    onSuccess={handlePaymentSuccess}
-                                />
-                            </Elements>
-                        )}
+                    <div className="sm:col-span-2">
+                        <label
+                            htmlFor="address"
+                            className="block text-sm font-medium text-gray-700"
+                        >
+                            Address
+                        </label>
+                        <input
+                            type="text"
+                            id="address"
+                            name="address"
+                            value={localBillingDetails.address} // Use localBillingDetails
+                            onChange={handleLocalBillingChange} // Use localBillingChange
+                            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+                        />
+                    </div>
 
-                        <div className="mt-6 flex items-center">
-                            <svg
-                                className="w-5 h-5 text-gray-400 mr-2"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                                xmlns="http://www.w3.org/2000/svg"
-                            >
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth="2"
-                                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-                                ></path>
-                            </svg>
-                            <p className="text-gray-500 text-sm">
-                                Your payment is securely processed by Stripe. We
-                                do not store your card details.
-                            </p>
-                        </div>
+                    <div>
+                        <label
+                            htmlFor="city"
+                            className="block text-sm font-medium text-gray-700"
+                        >
+                            City
+                        </label>
+                        <input
+                            type="text"
+                            id="city"
+                            name="city"
+                            value={localBillingDetails.city} // Use localBillingDetails
+                            onChange={handleLocalBillingChange} // Use localBillingChange
+                            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+                        />
+                    </div>
+
+                    <div>
+                        <label
+                            htmlFor="postalCode"
+                            className="block text-sm font-medium text-gray-700"
+                        >
+                            Postal Code
+                        </label>
+                        <input
+                            type="text"
+                            id="postalCode"
+                            name="postalCode"
+                            value={localBillingDetails.postalCode} // Use localBillingDetails
+                            onChange={handleLocalBillingChange} // Use localBillingChange
+                            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+                        />
                     </div>
                 </div>
             </div>
-        </div>
+
+            <div>
+                <h3 className="text-lg font-medium text-gray-900 mb-4">
+                    Payment Details
+                </h3>
+
+                <div className="bg-gray-50 p-4 rounded-lg">
+                    <div className="mb-4">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Card Information
+                        </label>
+                        <div className="border border-gray-300 rounded-md p-3">
+                            <CardElement
+                                options={{
+                                    style: {
+                                        base: {
+                                            fontSize: "16px",
+                                            color: "#424770",
+                                            "::placeholder": {
+                                                color: "#aab7c4",
+                                            },
+                                        },
+                                        invalid: {
+                                            color: "#9e2146",
+                                        },
+                                    },
+                                }}
+                            />
+                        </div>
+                    </div>
+
+                    <div className="flex justify-between items-center bg-gray-100 p-3 rounded-md">
+                        <span className="text-gray-700 font-medium">
+                            Total:
+                        </span>
+                        <span className="text-xl font-bold">
+                            ${(amount * 1.09).toFixed(2)}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <button
+                    type="submit"
+                    disabled={!stripe || loading}
+                    className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    {loading
+                        ? "Processing Payment..."
+                        : `Pay ${(amount * 1.09).toFixed(2)}`}
+                </button>
+            </div>
+        </form>
     );
 };
 
-export default PaymentPage;
+export default PaymentForm;

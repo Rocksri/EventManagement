@@ -2,14 +2,21 @@
 import React, { useState } from "react";
 import { useStripe, useElements, CardElement } from "@stripe/react-stripe-js";
 import { toast } from "react-hot-toast";
-import axios from "axios";
 
-const PaymentForm = ({ onSuccess, amount, clientSecret }) => {
-    // Add clientSecret prop
+const PaymentForm = ({ onSuccess, amount, clientSecret, billingDetails }) => {
+    // Add billingDetails to props
     const stripe = useStripe();
     const elements = useElements();
     const [loading, setLoading] = useState(false);
-    const [billingDetails, setBillingDetails] = useState({
+    // Remove billingDetails state from here, as it will be passed down
+
+    // No need for handleBillingChange if billingDetails is managed in parent.
+    // If you want PaymentForm to manage billingDetails internally and then pass it up,
+    // you'll keep the state and handler here, but pass it to onSuccess.
+    // For now, let's assume PaymentPage manages it and passes it down, as that's often cleaner.
+
+    // If PaymentForm manages billingDetails internally, keep these:
+    const [localBillingDetails, setLocalBillingDetails] = useState({
         name: "",
         email: "",
         address: "",
@@ -17,9 +24,9 @@ const PaymentForm = ({ onSuccess, amount, clientSecret }) => {
         postalCode: "",
     });
 
-    const handleBillingChange = (e) => {
+    const handleLocalBillingChange = (e) => {
         const { name, value } = e.target;
-        setBillingDetails((prev) => ({ ...prev, [name]: value }));
+        setLocalBillingDetails((prev) => ({ ...prev, [name]: value }));
     };
 
     const handleSubmit = async (e) => {
@@ -32,7 +39,8 @@ const PaymentForm = ({ onSuccess, amount, clientSecret }) => {
             return;
         }
 
-        if (!billingDetails.name || !billingDetails.email) {
+        // Use localBillingDetails here for validation if managed internally
+        if (!localBillingDetails.name || !localBillingDetails.email) {
             toast.error("Please fill in all required billing details");
             setLoading(false);
             return;
@@ -41,17 +49,17 @@ const PaymentForm = ({ onSuccess, amount, clientSecret }) => {
         try {
             // Confirm the payment with the client secret
             const { error, paymentIntent } = await stripe.confirmCardPayment(
-                clientSecret, // Use the clientSecret from props
+                clientSecret,
                 {
                     payment_method: {
                         card: elements.getElement(CardElement),
                         billing_details: {
-                            name: billingDetails.name,
-                            email: billingDetails.email,
+                            name: localBillingDetails.name, // Use localBillingDetails
+                            email: localBillingDetails.email, // Use localBillingDetails
                             address: {
-                                line1: billingDetails.address,
-                                city: billingDetails.city,
-                                postal_code: billingDetails.postalCode,
+                                line1: localBillingDetails.address, // Use localBillingDetails
+                                city: localBillingDetails.city, // Use localBillingDetails
+                                postal_code: localBillingDetails.postalCode, // Use localBillingDetails
                             },
                         },
                     },
@@ -63,7 +71,8 @@ const PaymentForm = ({ onSuccess, amount, clientSecret }) => {
                 toast.error(error.message || "Payment failed");
             } else if (paymentIntent.status === "succeeded") {
                 toast.success("Payment successful!");
-                onSuccess();
+                // Pass billingDetails back to the parent
+                onSuccess(localBillingDetails); // Pass the collected billing details
             }
         } catch (error) {
             console.error("Payment error:", error);
@@ -92,8 +101,8 @@ const PaymentForm = ({ onSuccess, amount, clientSecret }) => {
                             type="text"
                             id="name"
                             name="name"
-                            value={billingDetails.name}
-                            onChange={handleBillingChange}
+                            value={localBillingDetails.name} // Use localBillingDetails
+                            onChange={handleLocalBillingChange} // Use localBillingChange
                             className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
                             required
                         />
@@ -110,8 +119,8 @@ const PaymentForm = ({ onSuccess, amount, clientSecret }) => {
                             type="email"
                             id="email"
                             name="email"
-                            value={billingDetails.email}
-                            onChange={handleBillingChange}
+                            value={localBillingDetails.email} // Use localBillingDetails
+                            onChange={handleLocalBillingChange} // Use localBillingChange
                             className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
                             required
                         />
@@ -128,8 +137,8 @@ const PaymentForm = ({ onSuccess, amount, clientSecret }) => {
                             type="text"
                             id="address"
                             name="address"
-                            value={billingDetails.address}
-                            onChange={handleBillingChange}
+                            value={localBillingDetails.address} // Use localBillingDetails
+                            onChange={handleLocalBillingChange} // Use localBillingChange
                             className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
                         />
                     </div>
@@ -145,8 +154,8 @@ const PaymentForm = ({ onSuccess, amount, clientSecret }) => {
                             type="text"
                             id="city"
                             name="city"
-                            value={billingDetails.city}
-                            onChange={handleBillingChange}
+                            value={localBillingDetails.city} // Use localBillingDetails
+                            onChange={handleLocalBillingChange} // Use localBillingChange
                             className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
                         />
                     </div>
@@ -162,8 +171,8 @@ const PaymentForm = ({ onSuccess, amount, clientSecret }) => {
                             type="text"
                             id="postalCode"
                             name="postalCode"
-                            value={billingDetails.postalCode}
-                            onChange={handleBillingChange}
+                            value={localBillingDetails.postalCode} // Use localBillingDetails
+                            onChange={handleLocalBillingChange} // Use localBillingChange
                             className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
                         />
                     </div>

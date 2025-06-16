@@ -16,9 +16,26 @@ const PaymentPage = () => {
     const navigate = useNavigate();
     const [clientSecret, setClientSecret] = useState("");
     const [event, setEvent] = useState(null);
-    const [tickets, setTickets] = useState([]); // Added tickets state
+    const [tickets, setTickets] = useState([]);
     const [loading, setLoading] = useState(true);
     const [paymentIntent, setPaymentIntent] = useState(null);
+
+    // Add billingDetails state here
+    const [billingDetails, setBillingDetails] = useState({
+        name: "",
+        email: "",
+        address: "",
+        city: "",
+        postalCode: "",
+    });
+
+    // Function to handle changes in billing details (optional, if you want to manage them here)
+    // If PaymentForm manages them internally and passes them back, this might not be strictly needed for changes.
+    // However, it's good practice to have them managed in the parent if you need to access them before PaymentForm submits.
+    const handleBillingChange = (e) => {
+        const { name, value } = e.target;
+        setBillingDetails((prev) => ({ ...prev, [name]: value }));
+    };
 
     useEffect(() => {
         if (
@@ -81,12 +98,15 @@ const PaymentPage = () => {
         createPaymentIntent();
     }, [state, currentUser, navigate]);
 
-    const handlePaymentSuccess = async () => {
+    // Modify handlePaymentSuccess to accept billingDetails
+    const handlePaymentSuccess = async (collectedBillingDetails) => {
+        // Accept billingDetails here
         try {
             await axios.post("/tickets/confirm", {
                 paymentIntentId: paymentIntent.id,
                 eventId: state.eventId,
                 tickets: state.tickets,
+                billingDetails: collectedBillingDetails, // Pass billingDetails received from PaymentForm
             });
 
             toast.success("Payment successful! Tickets purchased.");
@@ -223,7 +243,11 @@ const PaymentPage = () => {
                                 <PaymentForm
                                     amount={paymentIntent.amount}
                                     onSuccess={handlePaymentSuccess}
-                                    clientSecret={clientSecret} // Pass clientSecret to PaymentForm
+                                    clientSecret={clientSecret}
+                                    // Pass initial billing details if you want PaymentForm to pre-fill
+                                    // and then handle updates internally
+                                    // billingDetails={billingDetails}
+                                    // onBillingChange={handleBillingChange} // If parent manages changes
                                 />
                             </Elements>
                         )}
