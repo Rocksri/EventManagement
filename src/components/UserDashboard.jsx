@@ -3,38 +3,79 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { toast } from "react-hot-toast";
 import { Link } from "react-router-dom";
+import { format } from "date-fns"; // Import format for consistent date display
+import DownloadTicketButton from "./DownloadTicketButton"; // Import the new component
 
 const UserDashboard = () => {
     const [upcomingEvents, setUpcomingEvents] = useState([]);
     const [pastEvents, setPastEvents] = useState([]);
-    const [tickets, setTickets] = useState([]);
+    const [tickets, setTickets] = useState([]); // This state seems to store all orders, potentially redundant with upcoming/past.
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const fetchData = async () => {
             try {
-                // Fetch user's events
-                const eventsRes = await axios.get("/tickets/orders");
+                // Fetch user's orders (which include basic event info)
+                const ordersRes = await axios.get("/tickets/orders");
                 const now = new Date();
 
-                const upcoming = [];
-                const past = [];
+                const upcomingOrders = [];
+                const pastOrders = [];
 
-                eventsRes.data.forEach((order) => {
-                    const eventDate = new Date(order.event.date);
-                    if (eventDate > now) {
-                        upcoming.push(order);
-                    } else {
-                        past.push(order);
+                // Separate orders into upcoming and past based on event date
+                ordersRes.data.forEach((order) => {
+                    // Ensure order.event exists and has a date before processing
+                    if (order.event && order.event.date) {
+                        const eventDate = new Date(order.event.date);
+                        if (eventDate > now) {
+                            upcomingOrders.push(order);
+                        } else {
+                            pastOrders.push(order);
+                        }
                     }
                 });
 
-                setUpcomingEvents(upcoming);
-                setPastEvents(past);
+                // Function to fetch full event details and attach them to each order
+                const enrichOrdersWithEventDetails = async (ordersArray) => {
+                    const enrichedOrders = await Promise.all(
+                        ordersArray.map(async (order) => {
+                            if (order.event && order.event._id) {
+                                try {
+                                    // Fetch full event details using the event ID from the order
+                                    const eventDetailsRes = await axios.get(
+                                        `/events/${order.event._id}`
+                                    );
+                                    // Return a new order object with the full event details replacing the basic one
+                                    return {
+                                        ...order,
+                                        event: eventDetailsRes.data,
+                                    };
+                                } catch (eventFetchError) {
+                                    console.error(
+                                        `Error fetching full event details for ID ${order.event._id}:`,
+                                        eventFetchError
+                                    );
+                                    // If fetching full event details fails, keep the order with its existing (basic) event data
+                                    return order;
+                                }
+                            }
+                            return order; // If order.event or order.event._id is missing, return order as is
+                        })
+                    );
+                    return enrichedOrders;
+                };
 
-                // Fetch tickets
-                const ticketsRes = await axios.get("/tickets/orders");
-                setTickets(ticketsRes.data);
+                // Enrich both upcoming and past orders with full event details
+                const enrichedUpcomingEvents =
+                    await enrichOrdersWithEventDetails(upcomingOrders);
+                const enrichedPastEvents = await enrichOrdersWithEventDetails(
+                    pastOrders
+                );
+
+                setUpcomingEvents(enrichedUpcomingEvents);
+                setPastEvents(enrichedPastEvents);
+                // Set tickets state (if it's intended to hold all orders, otherwise reconsider this line)
+                setTickets(ordersRes.data);
             } catch (error) {
                 console.error("Error fetching dashboard data:", error);
                 toast.error("Failed to load dashboard data");
@@ -44,7 +85,7 @@ const UserDashboard = () => {
         };
 
         fetchData();
-    }, []);
+    }, []); // Empty dependency array means this effect runs once after initial render
 
     const cancelTicket = async (orderId, ticketIndex) => {
         try {
@@ -52,6 +93,8 @@ const UserDashboard = () => {
                 ticketIndex,
             });
             // Update state to remove the ticket
+            // This logic assumes `tickets` state holds all orders and is being used
+            // for the "Your Tickets" table. You might need to update upcoming/pastEvents as well
             setTickets(
                 tickets.map((order) =>
                     order._id === orderId
@@ -65,6 +108,7 @@ const UserDashboard = () => {
                 )
             );
             toast.success("Ticket cancelled successfully");
+            // Consider refetching or updating upcoming/pastEvents states here if needed
         } catch (error) {
             console.error("Error cancelling ticket:", error);
             toast.error("Failed to cancel ticket");
@@ -79,7 +123,9 @@ const UserDashboard = () => {
         );
     }
     return (
-        <div className="space-y-8">
+        <div className="space-y-8 p-4">
+            {" "}
+            {/* Added padding to the main container */}
             {/* Upcoming Events */}
             <div>
                 <div className="flex justify-between items-center mb-4">
@@ -107,18 +153,31 @@ const UserDashboard = () => {
                                 key={order._id}
                                 className="bg-white rounded-lg shadow overflow-hidden"
                             >
+                                {/* Display event image from order.event.images */}
+                                {order.event.images &&
+                                order.event.images.length > 0 ? (
+                                    <img
+                                        src={order.event.images[0]} // Use the first image
+                                        alt={order.event.title}
+                                        className="w-full h-40 object-cover"
+                                    />
+                                ) : (
+                                    <div className="bg-gray-200 border-2 border-dashed w-full h-40 flex items-center justify-center text-gray-500">
+                                        No Image
+                                    </div>
+                                )}
                                 <div className="p-4">
                                     <h3 className="font-medium text-gray-900">
                                         {order.event.title}
                                     </h3>
                                     <p className="text-sm text-gray-500 mt-1">
-                                        {new Date(
-                                            order.event.date
-                                        ).toLocaleDateString("en-US", {
-                                            weekday: "short",
-                                            month: "short",
-                                            day: "numeric",
-                                        })}
+                                        {format(
+                                            new Date(order.event.date),
+                                            "MMM dd, yyyy"
+                                        )}
+                                    </p>
+                                    <p className="text-sm text-gray-500 mt-1">
+                                        {order.event.time}
                                     </p>
 
                                     <div className="mt-4">
@@ -129,17 +188,48 @@ const UserDashboard = () => {
                                             View Event
                                         </Link>
                                     </div>
+
+                                    {/* Display tickets for download */}
+                                    {order.tickets &&
+                                        order.tickets.length > 0 && (
+                                            <div className="mt-4 border-t pt-4">
+                                                <h4 className="font-medium text-gray-800 mb-2">
+                                                    Your Tickets:
+                                                </h4>
+                                                {order.tickets.map(
+                                                    (ticket, idx) => (
+                                                        <div
+                                                            key={idx}
+                                                            className="flex justify-between items-center text-sm mb-2"
+                                                        >
+                                                            <span>
+                                                                {
+                                                                    ticket.quantity
+                                                                }{" "}
+                                                                x{" "}
+                                                                {ticket.ticketId
+                                                                    ?.name ||
+                                                                    "N/A"}
+                                                            </span>
+                                                            <DownloadTicketButton
+                                                                order={order}
+                                                                ticket={ticket}
+                                                            />
+                                                        </div>
+                                                    )
+                                                )}
+                                            </div>
+                                        )}
                                 </div>
                             </div>
                         ))}
                     </div>
                 )}
             </div>
-
-            {/* Tickets */}
+            {/* Tickets (consolidated view of all purchased tickets) */}
             <div>
                 <h2 className="text-xl font-bold text-gray-900 mb-4">
-                    Your Tickets
+                    Your Tickets (All Orders)
                 </h2>
 
                 {tickets.length === 0 ? (
@@ -187,12 +277,21 @@ const UserDashboard = () => {
                                     </tr>
                                 </thead>
                                 <tbody className="bg-white divide-y divide-gray-200">
-                                    {tickets.map((order) =>
+                                    {/* Flatten the orders to display each individual ticket in the table */}
+                                    {tickets.flatMap((order) =>
                                         order.tickets.map((ticket, index) => (
                                             <tr key={`${order._id}-${index}`}>
                                                 <td className="px-6 py-4 whitespace-nowrap">
                                                     <div className="text-sm font-medium text-gray-900">
                                                         {order.event.title}
+                                                    </div>
+                                                    <div className="text-sm text-gray-500">
+                                                        {format(
+                                                            new Date(
+                                                                order.event.date
+                                                            ),
+                                                            "MMM dd, yyyy"
+                                                        )}
                                                     </div>
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap">
@@ -215,14 +314,23 @@ const UserDashboard = () => {
                                                         Confirmed
                                                     </span>
                                                 </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium flex space-x-2 items-center">
                                                     <button
-                                                        onClick={() => cancelTicket(order._id, index)}
-
+                                                        onClick={() =>
+                                                            cancelTicket(
+                                                                order._id,
+                                                                index
+                                                            )
+                                                        }
                                                         className="text-red-600 hover:text-red-900"
                                                     >
                                                         Cancel
                                                     </button>
+                                                    {/* Download button for each ticket in the table */}
+                                                    <DownloadTicketButton
+                                                        order={order}
+                                                        ticket={ticket}
+                                                    />
                                                 </td>
                                             </tr>
                                         ))
@@ -233,7 +341,6 @@ const UserDashboard = () => {
                     </div>
                 )}
             </div>
-
             {/* Past Events */}
             {pastEvents.length > 0 && (
                 <div>
@@ -246,14 +353,18 @@ const UserDashboard = () => {
                                 key={order._id}
                                 className="bg-white rounded-lg shadow overflow-hidden"
                             >
-                                {order.event.images.length > 0 ? (
+                                {/* Display event image from order.event.images */}
+                                {order.event.images &&
+                                order.event.images.length > 0 ? (
                                     <img
-                                        src={order.event.images[0]}
+                                        src={order.event.images[0]} // Corrected: Use the first image from the event
                                         alt={order.event.title}
                                         className="w-full h-40 object-cover"
                                     />
                                 ) : (
-                                    <div className="bg-gray-200 border-2 border-dashed w-full h-40" />
+                                    <div className="bg-gray-200 border-2 border-dashed w-full h-40 flex items-center justify-center text-gray-500">
+                                        No Image
+                                    </div>
                                 )}
 
                                 <div className="p-4">
@@ -261,13 +372,13 @@ const UserDashboard = () => {
                                         {order.event.title}
                                     </h3>
                                     <p className="text-sm text-gray-500 mt-1">
-                                        {new Date(
-                                            order.event.date
-                                        ).toLocaleDateString("en-US", {
-                                            weekday: "short",
-                                            month: "short",
-                                            day: "numeric",
-                                        })}
+                                        {format(
+                                            new Date(order.event.date),
+                                            "MMM dd, yyyy"
+                                        )}
+                                    </p>
+                                    <p className="text-sm text-gray-500 mt-1">
+                                        {order.event.time}
                                     </p>
 
                                     <div className="mt-4 flex space-x-2">
@@ -277,10 +388,40 @@ const UserDashboard = () => {
                                         >
                                             View Event
                                         </Link>
-                                        <button className="text-gray-600 hover:text-gray-800 text-sm font-medium">
-                                            Download Ticket
-                                        </button>
                                     </div>
+
+                                    {/* Display tickets for download in Past Events section */}
+                                    {order.tickets &&
+                                        order.tickets.length > 0 && (
+                                            <div className="mt-4 border-t pt-4">
+                                                <h4 className="font-medium text-gray-800 mb-2">
+                                                    Your Tickets:
+                                                </h4>
+                                                {order.tickets.map(
+                                                    (ticket, idx) => (
+                                                        <div
+                                                            key={idx}
+                                                            className="flex justify-between items-center text-sm mb-2"
+                                                        >
+                                                            <span>
+                                                                {
+                                                                    ticket.quantity
+                                                                }{" "}
+                                                                x{" "}
+                                                                {ticket.ticketId
+                                                                    ?.name ||
+                                                                    "N/A"}
+                                                            </span>
+                                                            {/* Corrected: Pass individual ticket to DownloadTicketButton */}
+                                                            <DownloadTicketButton
+                                                                order={order}
+                                                                ticket={ticket}
+                                                            />
+                                                        </div>
+                                                    )
+                                                )}
+                                            </div>
+                                        )}
                                 </div>
                             </div>
                         ))}

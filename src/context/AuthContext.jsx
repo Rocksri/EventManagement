@@ -2,29 +2,23 @@
 import React, { createContext, useState, useEffect, useContext } from "react";
 import axios from "axios";
 
+// This is crucial for sending cookies with Axios requests
+axios.defaults.withCredentials = true;
+
 const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
     const [currentUser, setCurrentUser] = useState(null);
     const [loading, setLoading] = useState(true);
 
-    // Set auth token for axios requests
-    const setAuthToken = (token) => {
-        if (token) {
-            axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-        } else {
-            delete axios.defaults.headers.common["Authorization"];
-        }
-    };
+    // ... (setAuthToken function)
 
-    useEffect(() => {
         const fetchUser = async () => {
             try {
-                // Only fetch if we have a token in memory
-                if (axios.defaults.headers.common["Authorization"]) {
-                    const { data } = await axios.get("/auth/profile");
-                    setCurrentUser(data);
-                }
+            if (axios.defaults.headers.common["Authorization"]) {
+                const { data } = await axios.get("/auth/profile");
+                setCurrentUser(data);
+            }
             } catch (err) {
                 setCurrentUser(null);
             } finally {
@@ -32,42 +26,49 @@ export function AuthProvider({ children }) {
             }
         };
 
+    // Expose a function to refresh the user profile
+    const refreshProfile = async () => {
+        setLoading(true); // Indicate loading while refetching
+        await fetchUser();
+    };
+
+    useEffect(() => {
         fetchUser();
     }, []);
 
     const login = async (email, password) => {
         try {
+            // Backend will set the HTTP-only cookie upon successful login
             const { data } = await axios.post("/auth/login", {
                 email,
                 password,
             });
 
-            // Set token in axios headers
-            setAuthToken(data.token);
-
-            // Fetch user profile
+            // Immediately fetch profile after login to update currentUser state
+            // This relies on the cookie just set by the backend.
             const profileResponse = await axios.get("/auth/profile");
             setCurrentUser(profileResponse.data);
 
-            return data;
+            await refreshProfile(); // Call refreshProfile after login
+            return data; // Return backend response, e.g., { msg: "Logged in successfully" }
         } catch (error) {
             console.error("Login error:", error);
             throw error;
         }
+
     };
 
     const register = async (userData) => {
         try {
+            // Backend will set the HTTP-only cookie upon successful registration
             const { data } = await axios.post("/auth/register", userData);
 
-            // Set token in axios headers
-            setAuthToken(data.token);
-
-            // Fetch user profile
+            // Immediately fetch profile after registration to update currentUser state
             const profileResponse = await axios.get("/auth/profile");
             setCurrentUser(profileResponse.data);
 
-            return data;
+            await refreshProfile(); // Call refreshProfile after registration
+            return data; // Return backend response, e.g., { msg: "Registration successful" }
         } catch (error) {
             console.error("Registration error:", error);
             throw error;
@@ -76,6 +77,7 @@ export function AuthProvider({ children }) {
 
     const logout = async () => {
         try {
+            // Backend will clear the HTTP-only cookie
             await axios.post("/auth/logout");
         } catch (error) {
             console.error("Logout error:", error);
@@ -91,6 +93,7 @@ export function AuthProvider({ children }) {
         register,
         logout,
         loading,
+        refreshProfile, // Expose refreshProfile
     };
 
     return (

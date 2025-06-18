@@ -16,11 +16,14 @@ const LoginPage = () => {
         setLoading(true);
 
         try {
+            // The login function in AuthContext now handles setting the cookie
+            // and fetching the user profile.
             await login(email, password);
             toast.success("Logged in successfully!");
             navigate("/");
         } catch (error) {
             console.error("Login failed:", error);
+            // The actual error message from the backend's response.data.msg would be better
             toast.error("Login failed. Please check your credentials.");
         } finally {
             setLoading(false);
@@ -56,10 +59,10 @@ const LoginPage = () => {
                                 type="email"
                                 autoComplete="email"
                                 required
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
                                 className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
                                 placeholder="Email address"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
                             />
                         </div>
                         <div>
@@ -72,10 +75,10 @@ const LoginPage = () => {
                                 type="password"
                                 autoComplete="current-password"
                                 required
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
                                 className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
                                 placeholder="Password"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
                             />
                         </div>
                     </div>

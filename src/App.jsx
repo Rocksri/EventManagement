@@ -24,6 +24,8 @@ import PaymentPage from "./pages/PaymentPage";
 import SchedulePage from "./pages/SchedulePage";
 import AnalyticsPage from "./pages/AnalyticsPage";
 import EditEventPage from "./pages/EditEventPage";
+import ProfileManagementPage from "./pages/ProfileManagementPage"; // <--- Add this import
+
 
 // Context
 import { AuthProvider, useAuth } from "./context/AuthContext";
@@ -100,6 +102,14 @@ function App() {
                                 element={
                                     <ProtectedRoute>
                                         <EditEventPage />
+                                    </ProtectedRoute>
+                                }
+                            />
+                            <Route
+                                path="/profile" // This is the path you linked to from Navbar
+                                element={
+                                    <ProtectedRoute>
+                                        <ProfileManagementPage />
                                     </ProtectedRoute>
                                 }
                             />

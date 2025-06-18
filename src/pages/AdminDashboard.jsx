@@ -5,12 +5,14 @@ import { toast } from "react-hot-toast";
 import AdminEventsPanel from "../components/AdminEventsPanel";
 import AdminUsersPanel from "../components/AdminUsersPanel";
 import AdminAnalyticsPanel from "../components/AdminAnalyticsPanel";
+import { useAuth } from "../context/AuthContext";
 
 const AdminDashboard = () => {
     const [activeTab, setActiveTab] = useState("events");
     const [events, setEvents] = useState([]);
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(true);
+    const { currentUser, logout } = useAuth();
 
     useEffect(() => {
         const fetchData = async () => {

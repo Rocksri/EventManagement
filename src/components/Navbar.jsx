@@ -65,9 +65,12 @@ const Navbar = () => {
                         {currentUser ? (
                             <div className="ml-3 relative">
                                 <div className="flex items-center space-x-3">
-                                    <span className="text-gray-700 text-sm font-medium">
+                                    <Link
+                                        to="/profile" // This is the new route for profile management
+                                        className="text-gray-800 cursor-pointer font-medium"
+                                    >
                                         {currentUser.name}
-                                    </span>
+                                    </Link>
                                     <button
                                         onClick={handleLogout}
                                         className="bg-gray-100 hover:bg-gray-200 text-gray-800 px-3 py-1 rounded-md text-sm font-medium"
