@@ -25,7 +25,8 @@ import SchedulePage from "./pages/SchedulePage";
 import AnalyticsPage from "./pages/AnalyticsPage";
 import EditEventPage from "./pages/EditEventPage";
 import ProfileManagementPage from "./pages/ProfileManagementPage"; // <--- Add this import
-
+import HelpDesk from "./pages/HelpDesk"; // <--- Add this import
+import AdminHelpDesk from "./pages/AdminHelpDesk"; // <--- Add this import
 
 // Context
 import { AuthProvider, useAuth } from "./context/AuthContext";
@@ -110,6 +111,22 @@ function App() {
                                 element={
                                     <ProtectedRoute>
                                         <ProfileManagementPage />
+                                    </ProtectedRoute>
+                                }
+                            />
+                            <Route
+                                path="/helpdesk"
+                                element={
+                                    <ProtectedRoute>
+                                        <HelpDesk />
+                                    </ProtectedRoute>
+                                }
+                            />
+                            <Route
+                                path="/admin/helpdesk"
+                                element={
+                                    <ProtectedRoute>
+                                        <AdminHelpDesk />
                                     </ProtectedRoute>
                                 }
                             />

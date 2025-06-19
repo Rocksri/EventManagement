@@ -12,6 +12,7 @@ const UserDashboard = () => {
     const [tickets, setTickets] = useState([]); // This state seems to store all orders, potentially redundant with upcoming/past.
     const [loading, setLoading] = useState(true);
 
+
     useEffect(() => {
         const fetchData = async () => {
             try {
@@ -39,6 +40,7 @@ const UserDashboard = () => {
                 const enrichOrdersWithEventDetails = async (ordersArray) => {
                     const enrichedOrders = await Promise.all(
                         ordersArray.map(async (order) => {
+                            // Ensure order.event exists and has an _id before attempting to fetch
                             if (order.event && order.event._id) {
                                 try {
                                     // Fetch full event details using the event ID from the order
@@ -154,12 +156,12 @@ const UserDashboard = () => {
                                 className="bg-white rounded-lg shadow overflow-hidden"
                             >
                                 {/* Display event image from order.event.images */}
-                                {order.event.images &&
+                                {order.event?.images &&
                                 order.event.images.length > 0 ? (
                                     <img
-                                        src={order.event.images[0]} // Use the first image
-                                        alt={order.event.title}
-                                        className="w-full h-40 object-cover"
+                                        src={`${API_URL}${order.event.images[0]}`}
+                                        alt={order.event.title || "Event Image"}
+                                        className="w-full h-40 object-contain"
                                     />
                                 ) : (
                                     <div className="bg-gray-200 border-2 border-dashed w-full h-40 flex items-center justify-center text-gray-500">
@@ -168,21 +170,28 @@ const UserDashboard = () => {
                                 )}
                                 <div className="p-4">
                                     <h3 className="font-medium text-gray-900">
-                                        {order.event.title}
+                                        {order.event?.title ||
+                                            "Event Title N/A"}
                                     </h3>
                                     <p className="text-sm text-gray-500 mt-1">
-                                        {format(
-                                            new Date(order.event.date),
-                                            "MMM dd, yyyy"
-                                        )}
+                                        {order.event?.date
+                                            ? format(
+                                                  new Date(order.event.date),
+                                                  "MMM dd, yyyy"
+                                              )
+                                            : "Date N/A"}
                                     </p>
                                     <p className="text-sm text-gray-500 mt-1">
-                                        {order.event.time}
+                                        {order.event?.time || "Time N/A"}
                                     </p>
 
                                     <div className="mt-4">
                                         <Link
-                                            to={`/events/${order.event._id}`}
+                                            to={
+                                                order.event?._id
+                                                    ? `/events/${order.event._id}`
+                                                    : "#"
+                                            }
                                             className="text-indigo-600 hover:text-indigo-800 text-sm font-medium"
                                         >
                                             View Event
@@ -283,15 +292,18 @@ const UserDashboard = () => {
                                             <tr key={`${order._id}-${index}`}>
                                                 <td className="px-6 py-4 whitespace-nowrap">
                                                     <div className="text-sm font-medium text-gray-900">
-                                                        {order.event.title}
+                                                        {order.event?.title ||
+                                                            "Event Title N/A"}
                                                     </div>
                                                     <div className="text-sm text-gray-500">
-                                                        {format(
-                                                            new Date(
-                                                                order.event.date
-                                                            ),
-                                                            "MMM dd, yyyy"
-                                                        )}
+                                                        {order.event?.date
+                                                            ? format(
+                                                                  new Date(
+                                                                      order.event.date
+                                                                  ),
+                                                                  "MMM dd, yyyy"
+                                                              )
+                                                            : "Date N/A"}
                                                     </div>
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap">
@@ -354,12 +366,12 @@ const UserDashboard = () => {
                                 className="bg-white rounded-lg shadow overflow-hidden"
                             >
                                 {/* Display event image from order.event.images */}
-                                {order.event.images &&
+                                {order.event?.images &&
                                 order.event.images.length > 0 ? (
                                     <img
-                                        src={order.event.images[0]} // Corrected: Use the first image from the event
-                                        alt={order.event.title}
-                                        className="w-full h-40 object-cover"
+                                        src={`${API_URL}${order.event.images[0]}`}
+                                        alt={order.event.title || "Event Image"}
+                                        className="w-full h-40 object-contain"
                                     />
                                 ) : (
                                     <div className="bg-gray-200 border-2 border-dashed w-full h-40 flex items-center justify-center text-gray-500">
@@ -369,21 +381,28 @@ const UserDashboard = () => {
 
                                 <div className="p-4">
                                     <h3 className="font-medium text-gray-900">
-                                        {order.event.title}
+                                        {order.event?.title ||
+                                            "Event Title N/A"}
                                     </h3>
                                     <p className="text-sm text-gray-500 mt-1">
-                                        {format(
-                                            new Date(order.event.date),
-                                            "MMM dd, yyyy"
-                                        )}
+                                        {order.event?.date
+                                            ? format(
+                                                  new Date(order.event.date),
+                                                  "MMM dd, yyyy"
+                                              )
+                                            : "Date N/A"}
                                     </p>
                                     <p className="text-sm text-gray-500 mt-1">
-                                        {order.event.time}
+                                        {order.event?.time || "Time N/A"}
                                     </p>
 
                                     <div className="mt-4 flex space-x-2">
                                         <Link
-                                            to={`/events/${order.event._id}`}
+                                            to={
+                                                order.event?._id
+                                                    ? `/events/${order.event._id}`
+                                                    : "#"
+                                            }
                                             className="text-indigo-600 hover:text-indigo-800 text-sm font-medium"
                                         >
                                             View Event

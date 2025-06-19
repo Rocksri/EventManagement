@@ -17,7 +17,7 @@ const EventDetailPage = () => {
     const [isOrganizer, setIsOrganizer] = useState(false);
     const [tickets, setTickets] = useState([]); // Add tickets state
     const [ticketsLoading, setTicketsLoading] = useState(true); // Add loading state for tickets
-
+    const API_URL = import.meta.env.VITE_API_URL; // Or process.env.REACT_APP_API_URL for CRA
 
     useEffect(() => {
         const fetchEvent = async () => {
@@ -166,21 +166,18 @@ const EventDetailPage = () => {
         );
     }
 
-
-
     const totalPrice = selectedTickets.reduce((sum, item) => {
         const ticket = tickets.find((t) => t._id === item.ticketId);
         if (ticket) {
-            console.log(
-                `Adding: ${ticket.price} * ${item.quantity} = ${
-                    ticket.price * item.quantity
-                }`
-            );
+            // console.log(
+            //     `Adding: ${ticket.price} * ${item.quantity} = ${
+            //         ticket.price * item.quantity
+            //     }`
+            // );
             return sum + ticket.price * item.quantity;
         }
         return sum;
     }, 0);
-
 
     if (loading || ticketsLoading) {
         return (
@@ -197,9 +194,9 @@ const EventDetailPage = () => {
                 <div className="relative">
                     {event.images.length > 0 ? (
                         <img
-                            src={event.images[0]}
+                            src={`${API_URL}${event.images[0]}`}
                             alt={event.title}
-                            className="w-full h-96 object-cover"
+                            className="w-full h-96 object-contain"
                         />
                     ) : (
                         <div className="bg-gray-200 border-2 border-dashed rounded-xl w-full h-96" />

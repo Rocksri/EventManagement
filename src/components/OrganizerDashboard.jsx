@@ -28,6 +28,7 @@ const OrganizerDashboard = () => {
     const [events, setEvents] = useState([]);
     const [analytics, setAnalytics] = useState(null);
     const [loading, setLoading] = useState(true);
+    const API_URL = import.meta.env.VITE_API_URL; // Or process.env.REACT_APP_API_URL for CRA
 
     useEffect(() => {
         const fetchData = async () => {
@@ -278,7 +279,7 @@ const OrganizerDashboard = () => {
                                                 <div className="flex items-center">
                                                     {event.images.length > 0 ? (
                                                         <img
-                                                            className="h-10 w-10 rounded-md object-cover"
+                                                            className="h-10 w-10 rounded-md object-contain"
                                                             src={
                                                                 event.images[0]
                                                             }

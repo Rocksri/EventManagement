@@ -3,6 +3,8 @@ import React from "react";
 import { Link } from "react-router-dom";
 
 const EventCard = ({ event }) => {
+    const API_URL = import.meta.env.VITE_API_URL; // Or process.env.REACT_APP_API_URL for CRA
+
     const minPrice =
         event.ticketTypes?.length > 0
             ? Math.min(...event.ticketTypes.map((t) => t.price))
@@ -13,9 +15,9 @@ const EventCard = ({ event }) => {
             <div className="bg-white rounded-xl shadow-md overflow-hidden transition-transform duration-300 group-hover:shadow-lg group-hover:-translate-y-1">
                 {event.images.length > 0 ? (
                     <img
-                        src={event.images[0]}
+                        src={`${API_URL}${event.images[0]}`}
                         alt={event.title}
-                        className="w-full h-48 object-cover"
+                        className="w-full h-48 object-contain"
                     />
                 ) : (
                     <div className="bg-gray-200 border-2 border-dashed rounded-xl w-full h-48" />

@@ -13,13 +13,12 @@ const CreateEventPage = () => {
         time: "",
         category: "",
         location: {
-            // Changed to nested object
             venue: "",
             address: "",
             city: "",
             country: "",
         },
-        images: [],
+        images: [], // This will store the URLs returned from the backend
         videos: [],
         ticketTypes: [
             {
@@ -31,6 +30,8 @@ const CreateEventPage = () => {
         ],
     });
     const [loading, setLoading] = useState(false);
+    const [selectedFiles, setSelectedFiles] = useState([]); // State to hold File objects for upload
+    const [imagePreviews, setImagePreviews] = useState([]); // State to hold image preview URLs
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -60,8 +61,6 @@ const CreateEventPage = () => {
                 { name: "", type: "general", price: 0, quantity: 100 },
             ],
         }));
-
-        console.log(...prev.ticketTypes, "price");
     };
 
     const removeTicketType = (index) => {
@@ -69,36 +68,67 @@ const CreateEventPage = () => {
         setFormData((prev) => ({ ...prev, ticketTypes }));
     };
 
+    // Handle file selection and generate previews
+    const handleFileChange = (e) => {
+        const files = Array.from(e.target.files);
+        setSelectedFiles(files);
+
+        // Generate image previews
+        const newPreviews = files.map((file) => URL.createObjectURL(file));
+        setImagePreviews(newPreviews);
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
-        const organizerRes = await axios.get("/auth/profile");
+
         try {
-            // Prepare event data without ticketTypes
+            let uploadedImageUrls = [];
+            // Step 1: Upload images if any are selected
+            if (selectedFiles.length > 0) {
+                const uploadFormData = new FormData();
+                selectedFiles.forEach((file) => {
+                    uploadFormData.append("eventImages", file); // 'eventImages' must match the field name in upload.array()
+                });
+
+                try {
+                    const uploadRes = await axios.post(
+                        "/upload/event",
+                        uploadFormData,
+                        {
+                            headers: {
+                                "Content-Type": "multipart/form-data",
+                            },
+                        }
+                    );
+                    uploadedImageUrls = uploadRes.data.imageUrls;
+                    toast.success("Images uploaded successfully!");
+                } catch (uploadError) {
+                    console.error("Error uploading images:", uploadError);
+                    toast.error("Failed to upload images. Please try again.");
+                    setLoading(false);
+                    return; // Stop the process if image upload fails
+                }
+            }
+
+            // Prepare event data with the received image URLs
             const eventData = {
                 title: formData.title,
                 description: formData.description,
                 date: formData.date,
                 time: formData.time,
                 category: formData.category,
-                location: {
-                    venue: formData.location.venue,
-                    address: formData.location.address,
-                    city: formData.location.city,
-                    country: formData.location.country,
-                },
-                images: formData.images,
+                location: formData.location, // Pass location directly as object
+                images: uploadedImageUrls, // Use the URLs from the upload
                 videos: formData.videos,
-                organizer: {
-                    user: organizerRes.data.name,
-                },
+                // organizer will be set on the backend based on req.user.id
             };
 
-            // Create event first
+            // Step 2: Create event with image URLs
             const response = await axios.post("/events", eventData);
             const eventId = response.data._id;
 
-            // Create tickets separately
+            // Step 3: Create tickets separately
             for (const ticket of formData.ticketTypes) {
                 await axios.post("/tickets", {
                     event: eventId,
@@ -113,7 +143,9 @@ const CreateEventPage = () => {
             navigate("/dashboard");
         } catch (error) {
             console.error("Error creating event or tickets:", error);
-            toast.error("Failed to create event or tickets");
+            toast.error(
+                error.response?.data?.msg || "Failed to create event or tickets"
+            );
         } finally {
             setLoading(false);
         }
@@ -250,7 +282,7 @@ const CreateEventPage = () => {
                                     type="text"
                                     name="venue"
                                     id="venue"
-                                    value={formData.venue}
+                                    value={formData.location.venue}
                                     onChange={handleLocationChange}
                                     className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
                                     required
@@ -267,7 +299,7 @@ const CreateEventPage = () => {
                                     type="text"
                                     name="address"
                                     id="address"
-                                    value={formData.address}
+                                    value={formData.location.address}
                                     onChange={handleLocationChange}
                                     className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
                                     required
@@ -284,7 +316,7 @@ const CreateEventPage = () => {
                                     type="text"
                                     name="city"
                                     id="city"
-                                    value={formData.city}
+                                    value={formData.location.city}
                                     onChange={handleLocationChange}
                                     className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
                                     required
@@ -301,13 +333,84 @@ const CreateEventPage = () => {
                                     type="text"
                                     name="country"
                                     id="country"
-                                    value={formData.country}
+                                    value={formData.location.country}
                                     onChange={handleLocationChange}
                                     className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
                                     required
                                 />
                             </div>
                         </div>
+                    </div>
+
+                    {/* Image Upload Section */}
+                    <div>
+                        <h2 className="text-lg font-medium text-gray-900 mb-4">
+                            Event Images (Max 5, up to 10MB each, will be
+                            optimized to 4K max resolution)
+                        </h2>
+                        <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
+                            <div className="space-y-1 text-center">
+                                <svg
+                                    className="mx-auto h-12 w-12 text-gray-400"
+                                    stroke="currentColor"
+                                    fill="none"
+                                    viewBox="0 0 48 48"
+                                    aria-hidden="true"
+                                >
+                                    <path
+                                        d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m-4-4l5.172 5.172a4 4 0 005.656 0L40 32M20 12h.01"
+                                        strokeWidth="2"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                    />
+                                </svg>
+                                <div className="flex text-sm text-gray-600">
+                                    <label
+                                        htmlFor="file-upload"
+                                        className="relative cursor-pointer bg-white rounded-md font-medium text-indigo-600 hover:text-indigo-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-indigo-500"
+                                    >
+                                        <span>Upload files</span>
+                                        <input
+                                            id="file-upload"
+                                            name="file-upload"
+                                            type="file"
+                                            className="sr-only"
+                                            multiple // Allow multiple file selection
+                                            accept="image/jpeg,image/png,image/gif"
+                                            onChange={handleFileChange}
+                                        />
+                                    </label>
+                                    <p className="pl-1">or drag and drop</p>
+                                </div>
+                                <p className="text-xs text-gray-500">
+                                    PNG, JPG, GIF up to 10MB each
+                                </p>
+                            </div>
+                        </div>
+                        {imagePreviews.length > 0 && (
+                            <div className="mt-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                                {imagePreviews.map((src, index) => (
+                                    <div
+                                        key={index}
+                                        className="relative aspect-w-16 aspect-h-9 rounded-lg overflow-hidden group"
+                                    >
+                                        <img
+                                            src={src}
+                                            alt={`Event Preview ${index + 1}`}
+                                            className="w-full h-full object-cover"
+                                        />
+                                        {/* Optional: Add a remove button for individual previews */}
+                                        {/* <button
+                                            type="button"
+                                            className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                                            onClick={() => {/* remove logic here */}
+                                        {/*}
+                                            &times;
+                                        </button> */}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
 
                     {/* Ticket Information */}

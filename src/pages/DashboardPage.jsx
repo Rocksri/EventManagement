@@ -23,9 +23,6 @@ const DashboardPage = () => {
                                 Welcome back, {currentUser.name}
                             </h1>
                             <p className="text-indigo-200">
-                                {currentUser.role === "organizer"
-                                    ? "Organizer"
-                                    : "Attendee"}{" "}
                                 Dashboard
                             </p>
                         </div>

@@ -19,6 +19,7 @@ const PaymentPage = () => {
     const [tickets, setTickets] = useState([]);
     const [loading, setLoading] = useState(true);
     const [paymentIntent, setPaymentIntent] = useState(null);
+    const API_URL = import.meta.env.VITE_API_URL; // Or process.env.REACT_APP_API_URL for CRA
 
     // Add billingDetails state here
     const [billingDetails, setBillingDetails] = useState({
@@ -140,7 +141,7 @@ const PaymentPage = () => {
                                 <div className="flex items-start">
                                     {event.images.length > 0 ? (
                                         <img
-                                            src={event.images[0]}
+                                            src={`${API_URL}${event.images[0]}`}
                                             alt={event.title}
                                             className="w-24 h-24 object-cover rounded-lg"
                                         />

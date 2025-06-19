@@ -1,323 +1,255 @@
-// ProfileManagementPage.jsx
+// src/components/UserDashboard.jsx
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { toast } from "react-hot-toast";
-import { useAuth } from "../context/AuthContext"; // Assuming AuthContext is here
+import { Link } from "react-router-dom";
+import { format } from "date-fns";
+import DownloadTicketButton from "./DownloadTicketButton";
 
-const ProfileManagementPage = () => {
-    const { currentUser, refreshProfile, updatePassword } = useAuth(); // Destructure refreshProfile and updatePassword
-    const [formData, setFormData] = useState({
-        name: "",
-        email: "",
-        address: {
-            fullAddress: "",
-            zip: "",
-        },
-        dob: "",
-        phone: "",
-    });
-    const [passwordData, setPasswordData] = useState({
-        currentPassword: "",
-        newPassword: "",
-        confirmNewPassword: "",
-    });
+const UserDashboard = () => {
+    const [upcomingEvents, setUpcomingEvents] = useState([]);
+    const [pastEvents, setPastEvents] = useState([]);
+    const [tickets, setTickets] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [passwordLoading, setPasswordLoading] = useState(false);
+
+    const API_URL = import.meta.env.VITE_API_URL; // Or process.env.REACT_APP_API_URL for CRA
 
     useEffect(() => {
-        if (currentUser) {
-            setFormData({
-                name: currentUser.name || "",
-                email: currentUser.email || "",
-                address: {
-                    fullAddress: currentUser.address?.fullAddress || "",
-                    zip: currentUser.address?.zip || "",
-                },
-                // Format DOB for input type="date"
-                dob: currentUser.dob
-                    ? new Date(currentUser.dob).toISOString().split("T")[0]
-                    : "",
-                phone: currentUser.phone || "",
-            });
-            setLoading(false);
-        }
-    }, [currentUser]);
+        const fetchData = async () => {
+            try {
+                const ordersRes = await axios.get("/tickets/orders");
+                const now = new Date();
 
-    const handleChange = (e) => {
-        const { name, value } = e.target;
-        if (name.startsWith("address.")) {
-            setFormData((prev) => ({
-                ...prev,
-                address: {
-                    ...prev.address,
-                    [name.split(".")[1]]: value,
-                },
-            }));
-        } else {
-            setFormData({ ...formData, [name]: value });
-        }
-    };
+                const upcomingOrders = [];
+                const pastOrders = [];
 
-    const handlePasswordChange = (e) => {
-        const { name, value } = e.target;
-        setPasswordData((prev) => ({ ...prev, [name]: value }));
-    };
+                ordersRes.data.forEach((order) => {
+                    if (order.event && order.event.date) {
+                        const eventDate = new Date(order.event.date);
+                        if (eventDate > now) {
+                            upcomingOrders.push(order);
+                        } else {
+                            pastOrders.push(order);
+                        }
+                    }
+                });
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        setLoading(true);
-        try {
-            const updatePayload = {
-                name: formData.name,
-                address: formData.address,
-                dob: formData.dob,
-                phone: formData.phone,
-                // Email is often not directly editable or requires special handling
-                // email: formData.email,
-            };
+                setUpcomingEvents(upcomingOrders);
+                setPastEvents(pastOrders);
+                setTickets(ordersRes.data); // Keep this if 'tickets' state is intentionally for all orders
+            } catch (error) {
+                console.error("Error fetching dashboard data:", error);
+                toast.error(
+                    error.response?.data?.msg ||
+                        "Failed to fetch dashboard data."
+                );
+            } finally {
+                setLoading(false);
+            }
+        };
 
-            await axios.put(`/users/${currentUser._id}`, updatePayload);
-            toast.success("Profile updated successfully!");
-            await refreshProfile(); // Refresh currentUser in AuthContext
-        } catch (error) {
-            console.error("Profile update failed:", error);
-            toast.error(
-                error.response?.data?.msg || "Failed to update profile."
-            );
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handlePasswordSubmit = async (e) => {
-        e.preventDefault();
-        setPasswordLoading(true);
-
-        if (passwordData.newPassword !== passwordData.confirmNewPassword) {
-            toast.error("New passwords do not match.");
-            setPasswordLoading(false);
-            return;
-        }
-
-        if (passwordData.newPassword.length < 6) {
-            toast.error("New password must be at least 6 characters long.");
-            setPasswordLoading(false);
-            return;
-        }
-
-        try {
-            await updatePassword(
-                passwordData.currentPassword,
-                passwordData.newPassword
-            );
-            toast.success("Password updated successfully!");
-            setPasswordData({
-                currentPassword: "",
-                newPassword: "",
-                confirmNewPassword: "",
-            });
-        } catch (error) {
-            console.error("Password update failed:", error);
-            toast.error(
-                error.response?.data?.msg || "Failed to update password."
-            );
-        } finally {
-            setPasswordLoading(false);
-        }
-    };
+        fetchData();
+    }, []);
 
     if (loading) {
         return (
-            <div className="flex justify-center py-12">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-600"></div>
+            <div className="text-center py-12">
+                <h3 className="text-xl font-medium text-gray-500">
+                    Loading dashboard...
+                </h3>
             </div>
         );
     }
 
     return (
-        <div className="max-w-2xl mx-auto my-8 p-6 bg-white rounded-lg shadow-md">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">
-                Edit Profile
-            </h2>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <h1 className="text-3xl font-bold text-gray-900 mb-8">
+                My Dashboard
+            </h1>
 
-            <form onSubmit={handleSubmit} className="space-y-6">
-                <div>
-                    <label
-                        htmlFor="name"
-                        className="block text-sm font-medium text-gray-700"
-                    >
-                        Name
-                    </label>
-                    <input
-                        type="text"
-                        id="name"
-                        name="name"
-                        value={formData.name}
-                        onChange={handleChange}
-                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                    />
-                </div>
-                <div>
-                    <label
-                        htmlFor="email"
-                        className="block text-sm font-medium text-gray-700"
-                    >
-                        Email
-                    </label>
-                    <input
-                        type="email"
-                        id="email"
-                        name="email"
-                        value={formData.email}
-                        onChange={handleChange}
-                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                        disabled // Email often not directly editable this way, or requires special handling
-                    />
-                </div>
-
-                {/* New fields for profile update */}
-                <div>
-                    <label
-                        htmlFor="fullAddress"
-                        className="block text-sm font-medium text-gray-700"
-                    >
-                        Full Address
-                    </label>
-                    <textarea
-                        id="fullAddress"
-                        name="address.fullAddress"
-                        rows="3"
-                        value={formData.address.fullAddress}
-                        onChange={handleChange}
-                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                    ></textarea>
-                </div>
-                <div>
-                    <label
-                        htmlFor="zip"
-                        className="block text-sm font-medium text-gray-700"
-                    >
-                        Zip Code
-                    </label>
-                    <input
-                        type="text"
-                        id="zip"
-                        name="address.zip"
-                        value={formData.address.zip}
-                        onChange={handleChange}
-                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                    />
-                </div>
-                <div>
-                    <label
-                        htmlFor="dob"
-                        className="block text-sm font-medium text-gray-700"
-                    >
-                        Date of Birth
-                    </label>
-                    <input
-                        type="date"
-                        id="dob"
-                        name="dob"
-                        value={formData.dob}
-                        onChange={handleChange}
-                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                    />
-                </div>
-                <div>
-                    <label
-                        htmlFor="phone"
-                        className="block text-sm font-medium text-gray-700"
-                    >
-                        Phone Number
-                    </label>
-                    <input
-                        type="tel"
-                        id="phone"
-                        name="phone"
-                        value={formData.phone}
-                        onChange={handleChange}
-                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                    />
-                </div>
-
-                <button
-                    type="submit"
-                    disabled={loading}
-                    className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                >
-                    {loading ? "Updating..." : "Update Profile"}
-                </button>
-            </form>
-
-            {/* Password Change Section */}
-            <div className="mt-8 pt-8 border-t border-gray-200">
-                <h3 className="text-xl font-bold text-gray-900 mb-4">
-                    Change Password
-                </h3>
-                <form onSubmit={handlePasswordSubmit} className="space-y-4">
-                    <div>
-                        <label
-                            htmlFor="currentPassword"
-                            className="block text-sm font-medium text-gray-700"
-                        >
-                            Current Password
-                        </label>
-                        <input
-                            type="password"
-                            id="currentPassword"
-                            name="currentPassword"
-                            value={passwordData.currentPassword}
-                            onChange={handlePasswordChange}
-                            required
-                            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                        />
+            {/* Upcoming Events Section */}
+            <div className="mb-12">
+                <h2 className="text-2xl font-semibold text-gray-800 mb-6">
+                    Upcoming Events
+                </h2>
+                {upcomingEvents.length === 0 ? (
+                    <p className="text-gray-600">
+                        You have no upcoming events.
+                    </p>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {upcomingEvents.map((order) => (
+                            <div
+                                key={order._id}
+                                className="bg-white rounded-lg shadow-md overflow-hidden"
+                            >
+                                <Link to={`/events/${order.event._id}`}>
+                                    {order.event.images &&
+                                    order.event.images.length > 0 ? (
+                                        <img
+                                            className="h-48 w-full object-cover"
+                                            src={`${API_URL}${order.event.images[0]}`}
+                                            alt={order.event.title}
+                                        />
+                                    ) : (
+                                        <div className="h-48 w-full bg-gray-200 flex items-center justify-center text-gray-500">
+                                            No Image
+                                        </div>
+                                    )}
+                                </Link>
+                                <div className="p-4">
+                                    <h3 className="text-xl font-semibold text-gray-900 truncate">
+                                        {order.event.title}
+                                    </h3>
+                                    <p className="text-gray-600 text-sm mt-1">
+                                        <span className="font-medium">
+                                            Date:
+                                        </span>{" "}
+                                        {format(
+                                            new Date(order.event.date),
+                                            "MMM dd, yyyy"
+                                        )}{" "}
+                                        at {order.event.time}
+                                    </p>
+                                    <p className="text-gray-600 text-sm">
+                                        <span className="font-medium">
+                                            Location:
+                                        </span>{" "}
+                                        {order.event.location.venue},{" "}
+                                        {order.event.location.city}
+                                    </p>
+                                    {order.tickets &&
+                                        order.tickets.length > 0 && (
+                                            <div className="mt-3 text-sm text-gray-700">
+                                                <p className="font-medium mb-1">
+                                                    Your Tickets:
+                                                </p>
+                                                {order.tickets.map(
+                                                    (ticket, idx) => (
+                                                        <div
+                                                            key={idx}
+                                                            className="flex items-center justify-between"
+                                                        >
+                                                            <span>
+                                                                {
+                                                                    ticket.quantity
+                                                                }{" "}
+                                                                x{" "}
+                                                                {ticket
+                                                                    .ticketId
+                                                                    ?.name ||
+                                                                    "N/A"}
+                                                            </span>
+                                                            <DownloadTicketButton
+                                                                order={order}
+                                                                ticket={
+                                                                    ticket
+                                                                }
+                                                            />
+                                                        </div>
+                                                    )
+                                                )}
+                                            </div>
+                                        )}
+                                </div>
+                            </div>
+                        ))}
                     </div>
-                    <div>
-                        <label
-                            htmlFor="newPassword"
-                            className="block text-sm font-medium text-gray-700"
-                        >
-                            New Password
-                        </label>
-                        <input
-                            type="password"
-                            id="newPassword"
-                            name="newPassword"
-                            value={passwordData.newPassword}
-                            onChange={handlePasswordChange}
-                            required
-                            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                        />
+                )}
+            </div>
+
+            {/* Past Events Section */}
+            <div>
+                <h2 className="text-2xl font-semibold text-gray-800 mb-6">
+                    Past Events
+                </h2>
+                {pastEvents.length === 0 ? (
+                    <p className="text-gray-600">
+                        You have no past events.
+                    </p>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {pastEvents.map((order) => (
+                            <div
+                                key={order._id}
+                                className="bg-white rounded-lg shadow-md overflow-hidden"
+                            >
+                                <Link to={`/events/${order.event._id}`}>
+                                    {order.event.images &&
+                                    order.event.images.length > 0 ? (
+                                        <img
+                                            className="h-48 w-full object-cover"
+                                            src={`${API_URL}${order.event.images[0]}`}
+                                            alt={order.event.title}
+                                        />
+                                    ) : (
+                                        <div className="h-48 w-full bg-gray-200 flex items-center justify-center text-gray-500">
+                                            No Image
+                                        </div>
+                                    )}
+                                </Link>
+                                <div className="p-4">
+                                    <h3 className="text-xl font-semibold text-gray-900 truncate">
+                                        {order.event.title}
+                                    </h3>
+                                    <p className="text-gray-600 text-sm mt-1">
+                                        <span className="font-medium">
+                                            Date:
+                                        </span>{" "}
+                                        {format(
+                                            new Date(order.event.date),
+                                            "MMM dd, yyyy"
+                                        )}{" "}
+                                        at {order.event.time}
+                                    </p>
+                                    <p className="text-gray-600 text-sm">
+                                        <span className="font-medium">
+                                            Location:
+                                        </span>{" "}
+                                        {order.event.location.venue},{" "}
+                                        {order.event.location.city}
+                                    </p>
+                                    {order.tickets &&
+                                        order.tickets.length > 0 && (
+                                            <div className="mt-3 text-sm text-gray-700">
+                                                <p className="font-medium mb-1">
+                                                    Your Tickets:
+                                                </p>
+                                                {order.tickets.map(
+                                                    (ticket, idx) => (
+                                                        <div
+                                                            key={idx}
+                                                            className="flex items-center justify-between"
+                                                        >
+                                                            <span>
+                                                                {
+                                                                    ticket.quantity
+                                                                }{" "}
+                                                                x{" "}
+                                                                {ticket
+                                                                    .ticketId
+                                                                    ?.name ||
+                                                                    "N/A"}
+                                                            </span>
+                                                            <DownloadTicketButton
+                                                                order={order}
+                                                                ticket={
+                                                                    ticket
+                                                                }
+                                                            />
+                                                        </div>
+                                                    )
+                                                )}
+                                            </div>
+                                        )}
+                                </div>
+                            </div>
+                        ))}
                     </div>
-                    <div>
-                        <label
-                            htmlFor="confirmNewPassword"
-                            className="block text-sm font-medium text-gray-700"
-                        >
-                            Confirm New Password
-                        </label>
-                        <input
-                            type="password"
-                            id="confirmNewPassword"
-                            name="confirmNewPassword"
-                            value={passwordData.confirmNewPassword}
-                            onChange={handlePasswordChange}
-                            required
-                            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                        />
-                    </div>
-                    <button
-                        type="submit"
-                        disabled={passwordLoading}
-                        className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-500"
-                    >
-                        {passwordLoading ? "Changing..." : "Change Password"}
-                    </button>
-                </form>
+                )}
             </div>
         </div>
     );
 };
 
-export default ProfileManagementPage;
+export default UserDashboard;

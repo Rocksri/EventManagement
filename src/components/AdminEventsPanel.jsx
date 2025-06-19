@@ -2,6 +2,9 @@
 import React from "react";
 
 const AdminEventsPanel = ({ events, onApprove, onReject }) => {
+    // Access the backend API URL from environment variables
+    const API_URL = import.meta.env.VITE_API_URL; // Or process.env.REACT_APP_API_URL for CRA
+
     if (!events || events.length === 0) {
         return (
             <div className="text-center py-12">
@@ -61,8 +64,8 @@ const AdminEventsPanel = ({ events, onApprove, onReject }) => {
                                     <div className="flex items-center">
                                         {event.images.length > 0 ? (
                                             <img
-                                                className="h-10 w-10 rounded-md object-cover"
-                                                src={event.images[0]}
+                                                className="h-10 w-10 rounded-md object-contain"
+                                                src={`${API_URL}${event.images[0]}`}
                                                 alt={event.title}
                                             />
                                         ) : (
