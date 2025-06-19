@@ -12,27 +12,36 @@ const AdminDashboard = () => {
     const [events, setEvents] = useState([]);
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(true);
-    const { currentUser, logout } = useAuth();
+    const { currentUser, logout } = useAuth(); // Assuming currentUser has the admin's ID
+
+    // Function to fetch all admin data (events and users)
+    const fetchData = async () => {
+        setLoading(true); // Set loading to true at the start of fetch
+        try {
+            const [eventsRes, usersRes] = await Promise.all([
+                axios.get("/events?status=draft"),
+                axios.get("/users"), // Ensure this endpoint is protected by auth + admin middleware
+            ]);
+            setEvents(eventsRes.data);
+            setUsers(usersRes.data);
+        } catch (error) {
+            console.error("Error fetching admin data:", error);
+            toast.error("Failed to load admin data");
+            // If the error is 403 or 401, you might want to redirect
+            if (
+                error.response &&
+                (error.response.status === 401 || error.response.status === 403)
+            ) {
+                logout(); // Log out if unauthorized
+            }
+        } finally {
+            setLoading(false);
+        }
+    };
 
     useEffect(() => {
-        const fetchData = async () => {
-            try {
-                const [eventsRes, usersRes] = await Promise.all([
-                    axios.get("/events?status=draft"),
-                    axios.get("/users"),
-                ]);
-                setEvents(eventsRes.data);
-                setUsers(usersRes.data);
-            } catch (error) {
-                console.error("Error fetching admin data:", error);
-                toast.error("Failed to load admin data");
-            } finally {
-                setLoading(false);
-            }
-        };
-
         fetchData();
-    }, []);
+    }, []); // Empty dependency array means this effect runs once after initial render
 
     const approveEvent = async (eventId) => {
         try {
@@ -47,6 +56,7 @@ const AdminDashboard = () => {
 
     const rejectEvent = async (eventId) => {
         try {
+            // Assuming rejecting an event means deleting it
             await axios.delete(`/events/${eventId}`);
             setEvents(events.filter((event) => event._id !== eventId));
             toast.success("Event rejected successfully");
@@ -57,13 +67,48 @@ const AdminDashboard = () => {
     };
 
     const deleteUser = async (userId) => {
+        // Prevent admin from deleting themselves
+        if (currentUser && currentUser.id === userId) {
+            toast.error("You cannot delete your own admin account from here.");
+            return;
+        }
         try {
             await axios.delete(`/users/${userId}`);
             setUsers(users.filter((user) => user._id !== userId));
             toast.success("User deleted successfully");
         } catch (error) {
             console.error("Error deleting user:", error);
-            toast.error("Failed to delete user");
+            const errorMessage =
+                error.response?.data?.msg || "Failed to delete user";
+            toast.error(errorMessage);
+        }
+    };
+
+    // New function to handle user role changes
+    const updateUserRole = async (userId, newRole) => {
+        // Prevent admin from changing their own role from here
+        if (currentUser && currentUser.id === userId) {
+            toast.error("You cannot change your own role from here.");
+            return;
+        }
+
+        try {
+            // Make PUT request to backend to update user's role
+            // Your backend's userController.js (updateUser) should handle this
+            await axios.put(`/users/${userId}`, { role: newRole });
+
+            // Update the local state to reflect the change
+            setUsers(
+                users.map((user) =>
+                    user._id === userId ? { ...user, role: newRole } : user
+                )
+            );
+            toast.success(`User role updated to '${newRole}'`);
+        } catch (error) {
+            console.error("Error updating user role:", error);
+            const errorMessage =
+                error.response?.data?.msg || "Failed to update user role";
+            toast.error(errorMessage);
         }
     };
 
@@ -133,6 +178,7 @@ const AdminDashboard = () => {
                                 <AdminUsersPanel
                                     users={users}
                                     onDelete={deleteUser}
+                                    onRoleChange={updateUserRole} // Pass the new role change handler
                                 />
                             )}
 

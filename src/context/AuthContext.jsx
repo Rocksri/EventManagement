@@ -11,20 +11,32 @@ export function AuthProvider({ children }) {
     const [currentUser, setCurrentUser] = useState(null);
     const [loading, setLoading] = useState(true);
 
-    // ... (setAuthToken function)
+    // This function is no longer setting a token in headers directly
+    // as we are now using HTTP-only cookies.
+    // Keeping it as a placeholder or if you decide to reintroduce header tokens
+    const setAuthToken = (token) => {
+        if (token) {
+            axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+        } else {
+            delete axios.defaults.headers.common["Authorization"];
+        }
+    };
 
-        const fetchUser = async () => {
-            try {
-            if (axios.defaults.headers.common["Authorization"]) {
-                const { data } = await axios.get("/auth/profile");
-                setCurrentUser(data);
-            }
-            } catch (err) {
-                setCurrentUser(null);
-            } finally {
-                setLoading(false);
-            }
-        };
+    const fetchUser = async () => {
+        try {
+            // Since the token is in an HTTP-only cookie, we don't need to check
+            // axios.defaults.headers.common["Authorization"].
+            // We just attempt to fetch the profile. If not authorized, the backend
+            // will return a 401, caught in the catch block.
+            const { data } = await axios.get("/auth/profile");
+            setCurrentUser(data);
+        } catch (err) {
+            console.error("Fetch user error:", err);
+            setCurrentUser(null);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     // Expose a function to refresh the user profile
     const refreshProfile = async () => {
@@ -45,17 +57,12 @@ export function AuthProvider({ children }) {
             });
 
             // Immediately fetch profile after login to update currentUser state
-            // This relies on the cookie just set by the backend.
-            const profileResponse = await axios.get("/auth/profile");
-            setCurrentUser(profileResponse.data);
-
             await refreshProfile(); // Call refreshProfile after login
             return data; // Return backend response, e.g., { msg: "Logged in successfully" }
         } catch (error) {
             console.error("Login error:", error);
             throw error;
         }
-
     };
 
     const register = async (userData) => {
@@ -64,9 +71,6 @@ export function AuthProvider({ children }) {
             const { data } = await axios.post("/auth/register", userData);
 
             // Immediately fetch profile after registration to update currentUser state
-            const profileResponse = await axios.get("/auth/profile");
-            setCurrentUser(profileResponse.data);
-
             await refreshProfile(); // Call refreshProfile after registration
             return data; // Return backend response, e.g., { msg: "Registration successful" }
         } catch (error) {
@@ -87,6 +91,19 @@ export function AuthProvider({ children }) {
         }
     };
 
+    const updatePassword = async (currentPassword, newPassword) => {
+        try {
+            const response = await axios.put("/auth/password", {
+                currentPassword,
+                newPassword,
+            });
+            return response.data;
+        } catch (error) {
+            console.error("Password update error:", error);
+            throw error;
+        }
+    };
+
     const value = {
         currentUser,
         login,
@@ -94,6 +111,7 @@ export function AuthProvider({ children }) {
         logout,
         loading,
         refreshProfile, // Expose refreshProfile
+        updatePassword, // Expose updatePassword
     };
 
     return (

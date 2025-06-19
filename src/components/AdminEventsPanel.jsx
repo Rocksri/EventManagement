@@ -15,6 +15,7 @@ const AdminEventsPanel = ({ events, onApprove, onReject }) => {
         );
     }
 
+
     return (
         <div className="bg-white rounded-lg shadow overflow-hidden">
             <div className="overflow-x-auto">
@@ -104,8 +105,11 @@ const AdminEventsPanel = ({ events, onApprove, onReject }) => {
                                     <button
                                         onClick={() => onApprove(event._id)}
                                         className="text-indigo-600 hover:text-indigo-900 mr-4"
+                                        disabled={event.status === "published"}
                                     >
-                                        Approve
+                                        {event.status === "published"
+                                            ? "Approved"
+                                            : "Approve"}
                                     </button>
                                     <button
                                         onClick={() => onReject(event._id)}
@@ -124,4 +128,3 @@ const AdminEventsPanel = ({ events, onApprove, onReject }) => {
 };
 
 export default AdminEventsPanel;
-    
