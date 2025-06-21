@@ -9,7 +9,7 @@ import ScheduleEditor from "../components/ScheduleEditor";
 const SchedulePage = () => {
     const { eventId } = useParams();
     const { currentUser, logout } = useAuth();
-    const [schedule, setSchedule] = useState(null); // Keep initial state as null
+    const [schedule, setSchedule] = useState(null);
     const [loading, setLoading] = useState(true);
     const [isEditing, setIsEditing] = useState(false);
 
@@ -17,12 +17,10 @@ const SchedulePage = () => {
         const fetchSchedule = async () => {
             try {
                 const { data } = await axios.get(`/schedules/${eventId}`);
-                // Ensure data is an object with sessions array, even if it's empty from backend
                 setSchedule(data || { event: eventId, sessions: [] });
             } catch (error) {
                 console.error("Error fetching schedule:", error);
                 toast.error("Failed to load schedule");
-                // If fetch fails entirely, set schedule to null to show "No schedule available" fallback
                 setSchedule(null);
             } finally {
                 setLoading(false);
@@ -32,18 +30,15 @@ const SchedulePage = () => {
         fetchSchedule();
     }, [eventId]);
 
-    console.log("Current Schedule State:", schedule); // Add this for debugging
-
     const handleSave = async (sessions) => {
         try {
-            // Include eventId in the payload for the backend POST request
             const response = await axios.post("/schedules", {
                 event: eventId,
                 sessions,
             });
             toast.success("Schedule updated successfully!");
             setIsEditing(false);
-            setSchedule(response.data); // Update local state with the saved schedule
+            setSchedule(response.data);
         } catch (error) {
             console.error("Error updating schedule:", error);
             toast.error("Failed to update schedule");
@@ -58,7 +53,7 @@ const SchedulePage = () => {
         );
     }
 
-    // Logic to determine if the schedule is effectively empty
+    // Fixed: Check if schedule exists and has sessions
     const hasSessions =
         schedule && schedule.sessions && schedule.sessions.length > 0;
 
@@ -76,29 +71,26 @@ const SchedulePage = () => {
                         Back to event
                     </Link>
                 </div>
-                {/* Only show edit button if not currently editing AND there are sessions or it's a new schedule */}
-                {(!isEditing &&
-                    (hasSessions || schedule) &&
-                    currentUser?.role === "admin") ||
-                    (currentUser?.role === "organizer" && (
+                {/* Fixed button rendering logic */}
+                {!isEditing &&
+                    (currentUser?.role === "admin" ||
+                        currentUser?.role === "organizer") && (
                         <button
                             onClick={() => setIsEditing(true)}
                             className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700"
                         >
-                            Edit Schedule
+                            {hasSessions ? "Edit Schedule" : "Create Schedule"}
                         </button>
-                    ))}
+                    )}
             </div>
 
             {isEditing ? (
-                // Always pass schedule.sessions (which could be []) to ScheduleEditor
                 <ScheduleEditor
                     sessions={schedule ? schedule.sessions : []}
                     onSave={handleSave}
                     onCancel={() => setIsEditing(false)}
                 />
-            ) : // Display schedule preview or "No schedule available" message
-            hasSessions ? (
+            ) : hasSessions ? (
                 <div className="bg-white rounded-xl shadow-md overflow-hidden">
                     <div className="p-6">
                         <div className="space-y-4">
@@ -150,15 +142,15 @@ const SchedulePage = () => {
                     <h3 className="text-xl font-medium text-gray-500">
                         No schedule available
                     </h3>
-                    {currentUser?.role === "admin" ||
-                        (currentUser?.role === "organizer" && (
-                            <button
-                                onClick={() => setIsEditing(true)}
-                                className="mt-4 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700"
-                            >
-                                Create Schedule
-                            </button>
-                        ))}
+                    {(currentUser?.role === "admin" ||
+                        currentUser?.role === "organizer") && (
+                        <button
+                            onClick={() => setIsEditing(true)}
+                            className="mt-4 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700"
+                        >
+                            Create Schedule
+                        </button>
+                    )}
                 </div>
             )}
         </div>
