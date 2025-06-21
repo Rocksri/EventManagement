@@ -310,7 +310,7 @@ const ProfileManagementPage = () => {
                     <button
                         type="submit"
                         disabled={passwordLoading}
-                        className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-500"
+                        className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2"
                     >
                         {passwordLoading ? "Changing..." : "Change Password"}
                     </button>

@@ -30,52 +30,57 @@ const AdminHelpDesk = () => {
             <h2 className="text-xl font-semibold mb-4">
                 HelpDesk Tickets (Admin)
             </h2>
-            {tickets.map((ticket) => (
-                <div
-                    key={ticket._id}
-                    className="border p-4 mb-4 rounded shadow-sm"
-                >
-                    <p>
-                        <strong>User:</strong> {ticket.user.name} ({ticket.role}
-                        )
-                    </p>
-                    <p>
-                        <strong>Subject:</strong> {ticket.subject}
-                    </p>
-                    <p>
-                        <strong>Message:</strong> {ticket.message}
-                    </p>
-                    <p>
-                        <strong>Status:</strong> {ticket.status}
-                    </p>
-                    {ticket.response ? (
-                        <p className="text-green-700">
-                            <strong>Response:</strong> {ticket.response}
+            {tickets.length === 0 ? (
+                <p className="text-gray-500">No tickets created.</p>
+            ) : (
+                tickets.map((ticket) => (
+                    <div
+                        key={ticket._id}
+                        className="border p-4 mb-4 rounded shadow-sm"
+                    >
+                        <p>
+                            <strong>User:</strong>{" "}
+                            {ticket.user?.name || "Unknown User"} ({ticket.role}
+                            ) )
                         </p>
-                    ) : (
-                        <>
-                            <textarea
-                                placeholder="Type your response"
-                                className="w-full p-2 border rounded mt-2"
-                                rows="3"
-                                value={responseMap[ticket._id] || ""}
-                                onChange={(e) =>
-                                    handleResponseChange(
-                                        ticket._id,
-                                        e.target.value
-                                    )
-                                }
-                            />
-                            <button
-                                onClick={() => handleRespond(ticket._id)}
-                                className="mt-2 bg-blue-600 text-white px-4 py-1 rounded"
-                            >
-                                Send Response
-                            </button>
-                        </>
-                    )}
-                </div>
-            ))}
+                        <p>
+                            <strong>Subject:</strong> {ticket.subject}
+                        </p>
+                        <p>
+                            <strong>Message:</strong> {ticket.message}
+                        </p>
+                        <p>
+                            <strong>Status:</strong> {ticket.status}
+                        </p>
+                        {ticket.response ? (
+                            <p className="text-green-700">
+                                <strong>Response:</strong> {ticket.response}
+                            </p>
+                        ) : (
+                            <>
+                                <textarea
+                                    placeholder="Type your response"
+                                    className="w-full p-2 border rounded mt-2"
+                                    rows="3"
+                                    value={responseMap[ticket._id] || ""}
+                                    onChange={(e) =>
+                                        handleResponseChange(
+                                            ticket._id,
+                                            e.target.value
+                                        )
+                                    }
+                                />
+                                <button
+                                    onClick={() => handleRespond(ticket._id)}
+                                    className="mt-2 bg-blue-600 text-white px-4 py-1 rounded"
+                                >
+                                    Send Response
+                                </button>
+                            </>
+                        )}
+                    </div>
+                ))
+            )}
         </div>
     );
 };

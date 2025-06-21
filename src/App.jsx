@@ -27,12 +27,13 @@ import EditEventPage from "./pages/EditEventPage";
 import ProfileManagementPage from "./pages/ProfileManagementPage"; // <--- Add this import
 import HelpDesk from "./pages/HelpDesk"; // <--- Add this import
 import AdminHelpDesk from "./pages/AdminHelpDesk"; // <--- Add this import
+import PasswordPage from "./pages/PasswordPage"; // <--- Add this import
 
 // Context
 import { AuthProvider, useAuth } from "./context/AuthContext";
 
 // Configure axios
-axios.defaults.baseURL = "http://localhost:5000/api";
+axios.defaults.baseURL = import.meta.env.VITE_API_URL + "/api";
 axios.defaults.withCredentials = true;
 
 function App() {
@@ -129,6 +130,10 @@ function App() {
                                         <AdminHelpDesk />
                                     </ProtectedRoute>
                                 }
+                            />
+                            <Route
+                                path="/password"
+                                element={<PasswordPage />}
                             />
                         </Routes>
                     </main>

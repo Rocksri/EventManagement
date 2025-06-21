@@ -11,7 +11,7 @@ const UserDashboard = () => {
     const [pastEvents, setPastEvents] = useState([]);
     const [tickets, setTickets] = useState([]); // This state seems to store all orders, potentially redundant with upcoming/past.
     const [loading, setLoading] = useState(true);
-
+    const API_URL = import.meta.env.VITE_API_URL; // Or process.env.REACT_APP_API_URL for CRA
 
     useEffect(() => {
         const fetchData = async () => {

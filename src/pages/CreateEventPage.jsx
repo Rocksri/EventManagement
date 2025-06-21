@@ -345,7 +345,7 @@ const CreateEventPage = () => {
                     {/* Image Upload Section */}
                     <div>
                         <h2 className="text-lg font-medium text-gray-900 mb-4">
-                            Event Images (Max 5, up to 10MB each, will be
+                            Event Images (Max 5, up to 20MB each, will be
                             optimized to 4K max resolution)
                         </h2>
                         <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
@@ -383,7 +383,7 @@ const CreateEventPage = () => {
                                     <p className="pl-1">or drag and drop</p>
                                 </div>
                                 <p className="text-xs text-gray-500">
-                                    PNG, JPG, GIF up to 10MB each
+                                    PNG, JPG, GIF up to 20MB each
                                 </p>
                             </div>
                         </div>

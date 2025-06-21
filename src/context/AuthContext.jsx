@@ -24,11 +24,10 @@ export function AuthProvider({ children }) {
 
     const fetchUser = async () => {
         try {
-            // Since the token is in an HTTP-only cookie, we don't need to check
-            // axios.defaults.headers.common["Authorization"].
-            // We just attempt to fetch the profile. If not authorized, the backend
-            // will return a 401, caught in the catch block.
-            const { data } = await axios.get("/auth/profile");
+            // Add credentials: 'include' to ensure cookies are sent
+            const { data } = await axios.get("/auth/profile", {
+                withCredentials: true,
+            });
             setCurrentUser(data);
         } catch (err) {
             console.error("Fetch user error:", err);

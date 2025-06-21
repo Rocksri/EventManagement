@@ -16,15 +16,12 @@ const LoginPage = () => {
         setLoading(true);
 
         try {
-            // The login function in AuthContext now handles setting the cookie
-            // and fetching the user profile.
             await login(email, password);
             toast.success("Logged in successfully!");
             navigate("/");
         } catch (error) {
             console.error("Login failed:", error);
-            // The actual error message from the backend's response.data.msg would be better
-            toast.error("Login failed. Please check your credentials.");
+            toast.error(error.response?.data?.msg || "Login failed. Please check your credentials.");
         } finally {
             setLoading(false);
         }
@@ -43,11 +40,12 @@ const LoginPage = () => {
                             to="/register"
                             className="font-medium text-indigo-600 hover:text-indigo-500"
                         >
-                            create a new account
+                            register a new account
                         </Link>
                     </p>
                 </div>
                 <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+                    <input type="hidden" name="remember" defaultValue="true" />
                     <div className="rounded-md shadow-sm -space-y-px">
                         <div>
                             <label htmlFor="email-address" className="sr-only">
@@ -63,6 +61,7 @@ const LoginPage = () => {
                                 placeholder="Email address"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
+                                disabled={loading}
                             />
                         </div>
                         <div>
@@ -79,6 +78,7 @@ const LoginPage = () => {
                                 placeholder="Password"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
+                                disabled={loading}
                             />
                         </div>
                     </div>
@@ -100,12 +100,12 @@ const LoginPage = () => {
                         </div>
 
                         <div className="text-sm">
-                            <a
-                                href="#"
+                            <Link
+                                to="/password"
                                 className="font-medium text-indigo-600 hover:text-indigo-500"
                             >
-                                Forgot your password?
-                            </a>
+                                Generate New Pass
+                            </Link>
                         </div>
                     </div>
 
