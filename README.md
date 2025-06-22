@@ -35,10 +35,6 @@ frontend/
 ├── public/
 └── vite.config.js
 
-bash
-Copy
-Edit
-
 ## ⚙️ Environment Setup
 
 Create a `.env` file:
@@ -46,9 +42,7 @@ Create a `.env` file:
 ```env
 VITE_API_URL=https://your-backend-api.onrender.com
 🚀 Running the Frontend
-bash
-Copy
-Edit
+
 cd frontend
 npm install
 npm run dev
@@ -59,7 +53,4 @@ Ensure VITE_API_URL points to the live backend
 
 Add _redirects file to public/:
 
-bash
-Copy
-Edit
 /*  /index.html  200
