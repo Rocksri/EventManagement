@@ -47,6 +47,41 @@ export function AuthProvider({ children }) {
         fetchUser();
     }, []);
 
+    useEffect(() => {
+        const interceptor = axios.interceptors.response.use(
+            (response) => response,
+            async (error) => {
+                const originalRequest = error.config;
+
+                // If 401 and not a login request, try refreshing token
+                if (
+                    error.response?.status === 401 &&
+                    !originalRequest.url.includes("/auth/login") &&
+                    !originalRequest._retry
+                ) {
+                    originalRequest._retry = true;
+
+                    try {
+                        // Try to get new token via silent refresh
+                        await axios.post(
+                            "/auth/refresh",
+                            {},
+                            { withCredentials: true }
+                        );
+                        return axios(originalRequest);
+                    } catch (refreshError) {
+                        console.error("Token refresh failed:", refreshError);
+                        setCurrentUser(null);
+                    }
+                }
+                return Promise.reject(error);
+            }
+        );
+
+        return () => axios.interceptors.response.eject(interceptor);
+    }, []);
+
+
     const login = async (email, password) => {
         try {
             // Backend will set the HTTP-only cookie upon successful login
@@ -58,10 +93,12 @@ export function AuthProvider({ children }) {
                 },
                 {
                     withCredentials: true,
+                    headers: { "Content-Type": "application/json" },
                 }
             );
 
-            // Immediately fetch profile after login to update currentUser state
+            // Add slight delay to ensure cookie is processed
+            await new Promise((resolve) => setTimeout(resolve, 100));
             await refreshProfile(); // Call refreshProfile after login
             return data; // Return backend response, e.g., { msg: "Logged in successfully" }
         } catch (error) {
@@ -69,6 +106,7 @@ export function AuthProvider({ children }) {
             throw error;
         }
     };
+
 
     const register = async (userData) => {
         try {
@@ -83,6 +121,7 @@ export function AuthProvider({ children }) {
             throw error;
         }
     };
+
 
     const logout = async () => {
         try {
@@ -101,6 +140,7 @@ export function AuthProvider({ children }) {
             setCurrentUser(null);
         }
     };
+
 
     const updatePassword = async (currentPassword, newPassword) => {
         try {
