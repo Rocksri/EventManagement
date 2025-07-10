@@ -58,6 +58,9 @@ export function AuthProvider({ children }) {
                 },
                 {
                     withCredentials: true,
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
                 }
             );
 
@@ -87,7 +90,13 @@ export function AuthProvider({ children }) {
     const logout = async () => {
         try {
             // Backend will clear the HTTP-only cookie
-            await axios.post("/auth/logout");
+            await axios.post(
+                "/api/auth/logout",
+                {},
+                {
+                    withCredentials: true,
+                }
+            );
         } catch (error) {
             console.error("Logout error:", error);
         } finally {
