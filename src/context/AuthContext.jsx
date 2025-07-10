@@ -58,9 +58,6 @@ export function AuthProvider({ children }) {
                 },
                 {
                     withCredentials: true,
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
                 }
             );
 
@@ -107,10 +104,14 @@ export function AuthProvider({ children }) {
 
     const updatePassword = async (currentPassword, newPassword) => {
         try {
-            const response = await axios.put("/auth/password", {
-                currentPassword,
-                newPassword,
-            });
+            const response = await axios.put(
+                "/auth/password",
+                {
+                    currentPassword,
+                    newPassword,
+                },
+                { withCredentials: true }
+            );
             return response.data;
         } catch (error) {
             console.error("Password update error:", error);

@@ -33,7 +33,7 @@ import PasswordPage from "./pages/PasswordPage"; // <--- Add this import
 import { AuthProvider, useAuth } from "./context/AuthContext";
 
 // Configure axios
-axios.defaults.baseURL = import.meta.env.VITE_API_URL + "/api";
+axios.defaults.baseURL = import.meta.env.VITE_API_URL;
 axios.defaults.withCredentials = true;
 
 function App() {
