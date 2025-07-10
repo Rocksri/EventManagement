@@ -50,10 +50,16 @@ export function AuthProvider({ children }) {
     const login = async (email, password) => {
         try {
             // Backend will set the HTTP-only cookie upon successful login
-            const { data } = await axios.post("/auth/login", {
-                email,
-                password,
-            });
+            const { data } = await axios.post(
+                "/auth/login",
+                {
+                    email,
+                    password,
+                },
+                {
+                    withCredentials: true,
+                }
+            );
 
             // Immediately fetch profile after login to update currentUser state
             await refreshProfile(); // Call refreshProfile after login
