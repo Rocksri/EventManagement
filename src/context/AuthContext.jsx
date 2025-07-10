@@ -91,7 +91,7 @@ export function AuthProvider({ children }) {
         try {
             // Backend will clear the HTTP-only cookie
             await axios.post(
-                "/api/auth/logout",
+                "/auth/logout",
                 {},
                 {
                     withCredentials: true,
