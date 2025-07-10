@@ -1,12 +1,56 @@
-# React + Vite
+# Online Event Management Platform – Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+This is the frontend of the **Online Event Management Platform** built with **React.js** and **TailwindCSS**.
 
-Currently, two official plugins are available:
+## 🌐 Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- 🧾 Event Listings with filter, search, and media display
+- 🎟️ Ticket purchasing system with secure checkout
+- 🧍 Attendee registration and management
+- 📅 Event schedule view
+- 📈 Dashboard for users and organizers
+- 🛡️ Authentication and profile management
+- 🛠️ Admin panel for user/event control
+- 📬 Email confirmations
+- 💳 Payment integration (Stripe or Razorpay)
 
-## Expanding the ESLint configuration
+## 🔧 Tech Stack
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+- **React.js** with Vite
+- **TailwindCSS** for UI styling
+- **Axios** for API requests
+- **React Router v6**
+- **JWT Authentication (via Cookies)**
+- **Chart.js** or **Recharts** for analytics
+
+## 📁 Folder Structure
+
+frontend/
+├── src/
+│ ├── components/
+│ ├── pages/
+│ ├── context/
+│ ├── services/
+│ └── App.jsx
+├── public/
+└── vite.config.js
+
+## ⚙️ Environment Setup
+
+Create a `.env` file:
+
+```env
+VITE_API_URL=https://your-backend-api.onrender.com
+🚀 Running the Frontend
+
+cd frontend
+npm install
+npm run dev
+🌍 Deployment
+Deploy using Netlify
+
+Ensure VITE_API_URL points to the live backend
+
+Add _redirects file to public/:
+
+/*  /index.html  200
