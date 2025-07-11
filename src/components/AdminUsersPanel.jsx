@@ -1,14 +1,27 @@
 // src/components/AdminUsersPanel.jsx
 import React, { useState } from "react";
-const API_URL = import.meta.env.VITE_API_URL; // Or process.env.REACT_APP_API_URL for CRA
+const API_URL = import.meta.env.VITE_API_URL;
 
 const AdminUsersPanel = ({ users, onDelete, onRoleChange }) => {
-    // Added onRoleChange prop
-    // State to manage the role being edited for a specific user
-    const [editingRole, setEditingRole] = useState(null); // { userId: '...', role: 'newRole' }
-
-    // Options for the role dropdown
+    const [editingRole, setEditingRole] = useState(null);
+    const [isUpdating, setIsUpdating] = useState(false); // Track update loading state
     const roleOptions = ["attendee", "organizer", "admin"];
+
+    const handleRoleUpdate = async (userId, newRole) => {
+        setIsUpdating(true);
+        try {
+            await onRoleChange(userId, newRole);
+            // After successful update, reset editing state
+            setEditingRole(null);
+
+            // Refresh the page to reflect changes
+            window.location.reload();
+        } catch (error) {
+            console.error("Role update failed:", error);
+        } finally {
+            setIsUpdating(false);
+        }
+    };
 
     if (!users || users.length === 0) {
         return (
@@ -24,6 +37,7 @@ const AdminUsersPanel = ({ users, onDelete, onRoleChange }) => {
         <div className="bg-white rounded-lg shadow overflow-hidden">
             <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
+                    {/* Table header remains the same */}
                     <thead className="bg-gray-50">
                         <tr>
                             <th
@@ -58,6 +72,7 @@ const AdminUsersPanel = ({ users, onDelete, onRoleChange }) => {
                             </th>
                         </tr>
                     </thead>
+
                     <tbody className="bg-white divide-y divide-gray-200">
                         {users.map((user) => (
                             <tr key={user._id}>
@@ -104,14 +119,10 @@ const AdminUsersPanel = ({ users, onDelete, onRoleChange }) => {
                                                         : "bg-green-100 text-green-800"
                                                 }
                                             `}
-                                            // Prevent changing own role for current admin (currentUser)
-                                            // This requires passing currentUser ID from AdminDashboard
-                                            // For simplicity, we'll assume currentUser check is done at AdminDashboard level before rendering this.
-                                            // Alternatively, you could pass `currentAdminId` as a prop.
                                             disabled={
                                                 user.role === "admin" &&
                                                 !onRoleChange
-                                            } // Example: disable if user is admin and not allowing change
+                                            }
                                         >
                                             {roleOptions.map((role) => (
                                                 <option key={role} value={role}>
@@ -127,14 +138,17 @@ const AdminUsersPanel = ({ users, onDelete, onRoleChange }) => {
                                             editingRole.role !== user.role && (
                                                 <button
                                                     onClick={() =>
-                                                        onRoleChange(
+                                                        handleRoleUpdate(
                                                             user._id,
                                                             editingRole.role
                                                         )
                                                     }
                                                     className="inline-flex items-center px-2.5 py-1.5 border border-transparent text-xs font-medium rounded text-indigo-700 bg-indigo-100 hover:bg-indigo-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                                                    disabled={isUpdating}
                                                 >
-                                                    Update
+                                                    {isUpdating
+                                                        ? "Updating..."
+                                                        : "Update"}
                                                 </button>
                                             )}
                                     </div>
