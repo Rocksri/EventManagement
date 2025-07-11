@@ -47,40 +47,6 @@ export function AuthProvider({ children }) {
         fetchUser();
     }, []);
 
-    useEffect(() => {
-        const interceptor = axios.interceptors.response.use(
-            (response) => response,
-            async (error) => {
-                const originalRequest = error.config;
-
-                // If 401 and not a login request, try refreshing token
-                if (
-                    error.response?.status === 401 &&
-                    !originalRequest.url.includes("/auth/login") &&
-                    !originalRequest._retry
-                ) {
-                    originalRequest._retry = true;
-
-                    try {
-                        // Try to get new token via silent refresh
-                        await axios.post(
-                            "/auth/refresh",
-                            {},
-                            { withCredentials: true }
-                        );
-                        return axios(originalRequest);
-                    } catch (refreshError) {
-                        console.error("Token refresh failed:", refreshError);
-                        setCurrentUser(null);
-                    }
-                }
-                return Promise.reject(error);
-            }
-        );
-
-        return () => axios.interceptors.response.eject(interceptor);
-    }, []);
-
 
     const login = async (email, password) => {
         try {
