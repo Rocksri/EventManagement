@@ -12,7 +12,7 @@ const HomePage = () => {
     const [filteredEvents, setFilteredEvents] = useState([]);
     const [categories, setCategories] = useState([]);
     const [locations, setLocations] = useState([]);
-
+    const { currentUser } = useAuth();
     useEffect(() => {
         const fetchEvents = async () => {
             try {
@@ -138,12 +138,15 @@ const HomePage = () => {
                     >
                         Browse Events
                     </Link>
-                    <Link
-                        to="/create-event"
-                        className="bg-indigo-600 text-white hover:bg-indigo-800 px-6 py-3 rounded-lg font-medium"
-                    >
-                        Create Event
-                    </Link>
+                    {currentUser?.role &&
+                        ["organizer", "admin"].includes(currentUser.role) && (
+                            <Link
+                                to="/create-event"
+                                className="bg-indigo-600 text-white hover:bg-indigo-800 px-6 py-3 rounded-lg font-medium"
+                            >
+                                Create Event
+                            </Link>
+                        )}
                 </div>
             </div>
 

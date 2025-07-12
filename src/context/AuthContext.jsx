@@ -53,23 +53,32 @@ export function AuthProvider({ children }) {
 
     const login = async (email, password) => {
         try {
-            // Backend will set the HTTP-only cookie upon successful login
             const { data } = await axios.post(
                 "/auth/login",
-                {
-                    email,
-                    password,
-                },
+                { email, password },
                 {
                     withCredentials: true,
-                    headers: { "Content-Type": "application/json" },
+                    headers: {
+                        "x-requested-with": "XMLHttpRequest",
+                    },
                 }
             );
 
-            // Add slight delay to ensure cookie is processed
-            await new Promise((resolve) => setTimeout(resolve, 300));
-            await refreshProfile(); // Call refreshProfile after login
-            return data; // Return backend response, e.g., { msg: "Logged in successfully" }
+            // Use exponential backoff for profile fetch
+            let retries = 0;
+            const fetchProfile = async () => {
+                try {
+                    await refreshProfile();
+                } catch (err) {
+                    if (retries < 3) {
+                        retries++;
+                        setTimeout(fetchProfile, 300 * Math.pow(2, retries));
+                    }
+                }
+            };
+
+            await fetchProfile();
+            return data;
         } catch (error) {
             console.error("Login error:", error);
             throw error;
