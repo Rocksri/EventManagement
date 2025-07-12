@@ -27,6 +27,9 @@ export function AuthProvider({ children }) {
             // Add credentials: 'include' to ensure cookies are sent
             const { data } = await axios.get("/auth/profile", {
                 withCredentials: true,
+                headers: {
+                    "x-requested-with": "XMLHttpRequest", // Add this header
+                },
             });
             setCurrentUser(data);
         } catch (err) {
@@ -64,7 +67,7 @@ export function AuthProvider({ children }) {
             );
 
             // Add slight delay to ensure cookie is processed
-            await new Promise((resolve) => setTimeout(resolve, 100));
+            await new Promise((resolve) => setTimeout(resolve, 300));
             await refreshProfile(); // Call refreshProfile after login
             return data; // Return backend response, e.g., { msg: "Logged in successfully" }
         } catch (error) {

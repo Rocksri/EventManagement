@@ -4,6 +4,7 @@ import axios from "axios";
 import { Link } from "react-router-dom";
 import EventCard from "../components/EventCard";
 import SearchFilters from "../components/SearchFilters";
+import { useAuth } from "../context/AuthContext";
 
 const HomePage = () => {
     const [events, setEvents] = useState([]);
