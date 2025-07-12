@@ -28,6 +28,7 @@ import ProfileManagementPage from "./pages/ProfileManagementPage"; // <--- Add t
 import HelpDesk from "./pages/HelpDesk"; // <--- Add this import
 import AdminHelpDesk from "./pages/AdminHelpDesk"; // <--- Add this import
 import PasswordPage from "./pages/PasswordPage"; // <--- Add this import
+import IncognitoNotice from "./components/IncognitoNotice";
 
 // Context
 import { AuthProvider, useAuth } from "./context/AuthContext";
@@ -139,6 +140,7 @@ function App() {
                     </main>
                     <Footer />
                     <Toaster position="top-right" />
+                    <IncognitoNotice />
                 </div>
             </Router>
         </AuthProvider>
