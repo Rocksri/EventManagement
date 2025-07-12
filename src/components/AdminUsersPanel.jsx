@@ -78,11 +78,21 @@ const AdminUsersPanel = ({ users, onDelete, onRoleChange }) => {
                             <tr key={user._id}>
                                 <td className="px-6 py-4 whitespace-nowrap">
                                     <div className="flex items-center">
-                                        <img
-                                            src={`${API_URL}${user.profileImage}`}
-                                            alt="Profile"
-                                            className="bg-gray-200 border-2 border-dashed rounded-full w-10 h-10"
-                                        />
+                                        {user.profileImage ? (
+                                            <img
+                                                src={`${API_URL}${user.profileImage}`}
+                                                alt="Profile"
+                                                className="bg-gray-200 border-2 border-dashed rounded-full w-10 h-10"
+                                            />
+                                        ) : (
+                                            <div className="bg-gray-200 border-2 border-dashed rounded-full w-10 h-10 flex items-center justify-center">
+                                                <span className="text-xs font-bold text-gray-600">
+                                                    {user.name
+                                                        .charAt(0)
+                                                        .toUpperCase()}
+                                                </span>
+                                            </div>
+                                        )}
                                         <div className="ml-4">
                                             <div className="text-sm font-medium text-gray-900">
                                                 {user.name}

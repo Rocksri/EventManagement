@@ -25,8 +25,14 @@ const AdminDashboard = () => {
             setEvents(eventsRes.data);
             setUsers(usersRes.data);
         } catch (error) {
-            console.error("Error fetching admin data:", error);
-            toast.error("Failed to load admin data");
+            console.error("Full error:", error);
+            console.log("Response data:", error.response?.data);
+            toast.error(
+                `Failed to load data: ${
+                    error.response?.data?.message || error.message
+                }`
+            );
+
             // If the error is 403 or 401, you might want to redirect
             if (
                 error.response &&
